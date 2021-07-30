@@ -20,6 +20,9 @@ constexpr int k_wind_direction_pin = A0;
 // integer number of 1 mph.
 constexpr unsigned long k_wind_speed_sample_t = 2250;
 
+// This is the signature for the sample callback function.
+using windsamplefn = void (*)(float mph, int direction);
+
 class davis6410 {
  public:
   // The Davis runs off two pins, a digital input for the wind speed pulses and
@@ -34,6 +37,13 @@ class davis6410 {
   // Initialise the hardware resources and set up the isr.
   // This must be done once before the 6410 can be used.
   void initialise();
+
+  // Service the interface.
+  void service();
+
+  // Start a ne sample.
+  // The callback will be called when the sample is ready.
+  void start_sample(windsamplefn fn);
 
   // Sample the wind speed.
   // The pulses from the Davis are counted over the sampling period and
@@ -60,4 +70,26 @@ class davis6410 {
 
   // The resources must be initialised before the 6410 can be read.
   bool initialised_ = false;
+
+  // The state of the interface.
+  enum {
+    idle,
+    new_sample,
+    sampling_speed,
+    sampling_direction,
+    send_frame,
+  } state_ = idle;
+
+  // This is the start time in milliseconds of the current sample frame.
+  unsigned long sample_start_time_;
+
+  // This is the last read wind speed.
+  float wind_speed_;
+
+  // This is the last read wind direction.
+  int wind_direction_;
+
+  // The wind sample callback function.
+  windsamplefn sample_fn_ = nullptr;
+
 };
