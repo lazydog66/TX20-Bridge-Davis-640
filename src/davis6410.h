@@ -1,3 +1,9 @@
+// --------------------------------------------------------------------------------------------------------------------
+// Interface for the Davis 6410 wind meter.
+//
+// The wind meter measures wind speed and direction. The speed is measured by counting pulses prodcued by a
+// reed switch, and the direction is encoded by a 20KOhm potentiometer.
+// --------------------------------------------------------------------------------------------------------------------
 
 // The default pin for the wind sensor.
 // Pin 2 is used because falling edge interrupts are used.
