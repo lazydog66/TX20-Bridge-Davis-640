@@ -22,10 +22,11 @@ void setup() {
 
   Serial.begin(9600);
 
-  // Teh 6410 interface must be initialised before use.
+  // The 6410 interface must be initialised before use.
   wind_meter.initialise();
 
   // Start the 1st wind sample off.
+  // From then off samples are auto triggered.
   wind_meter.start_sample(log_wind_sample);
 }
 

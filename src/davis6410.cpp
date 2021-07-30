@@ -82,7 +82,7 @@ void davis6410::service() {
       }
 
     case new_sample: {
-        // Start a new sample off, interrupts enabled.
+        // Start a new sample off, txd interrupts enabled.
         wind_speed_pulse_counter = 0;
         sample_start_time_ = millis();
         sei();
