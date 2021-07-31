@@ -55,10 +55,11 @@ tx20emulator::tx20emulator(int dtr_pin, int txd_pin)
 // ------------------------------------------------------------------------------------------------
 void tx20emulator::initialise() {
 
+  // The led is used to show the state of dtr.
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
-  // dtr needs to be pulled load for the tx20 to be active.
+  // dtr needs to be pulled low for the tx20 to be active.
   pinMode(dtr_pin_, INPUT_PULLUP);
 
   // The frame bits are transmitted on txd.
@@ -78,9 +79,11 @@ void tx20emulator::initialise() {
 // end of the sending phase, the emulator loops back to the wake up phase and so
 // on. If Dtr goes high, the emulator enters the inactive phase.
 //
-// The built in led is lit white the tx20 emulator is sampling and sending.
+// The built in led is lit while the tx20 emulator is sampling and sending.
 // ------------------------------------------------------------------------------------------------
 void tx20emulator::service() {
+
+  if (!initialised_) return;
 
   switch (state_) {
     case tx20state::go_inactive: {
