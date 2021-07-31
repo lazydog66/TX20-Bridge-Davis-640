@@ -1,12 +1,9 @@
-#include <Arduino.h>
-#include <math.h>
-
 #include "davis6410.h"
 
+#include <math.h>
 
 using microseconds_t = unsigned long;
 using milliseconds_t = unsigned long;
-
 
 // Debounce period for the wind speed pulses.
 // At 200 mph we have 1 pulse per 11.26 ms. With a realistic max wind speed of
@@ -42,131 +39,110 @@ static void isr_6410() {
 // --------------------------------------------------------------------------------------------------------------------
 // Constructor does not initialise the hardware.
 // --------------------------------------------------------------------------------------------------------------------
-davis6410::davis6410(int wind_speed_pin, int wind_vane_pin, unsigned long sample_period)
-  : wind_speed_pin_{ wind_vane_pin }, wind_vane_pin_{ wind_vane_pin }, sample_period_{ sample_period }
-{
-}
+davis6410::davis6410(int wind_speed_pin, int wind_vane_pin,
+                     unsigned long sample_period)
+    : wind_speed_pin_{wind_speed_pin},
+      wind_vane_pin_{wind_vane_pin},
+      sample_period_{sample_period} {}
 
 // --------------------------------------------------------------------------------------------------------------------
 // The isr for servicing the wind speed reading.
-// The variable debounce_start_t should be cleared before the first interrupt of a sample period.
+// The variable debounce_start_t should be cleared before the first interrupt of
+// a sample period.
 // --------------------------------------------------------------------------------------------------------------------
-void davis6410::initialise()
-{
+void davis6410::initialise() {
   pinMode(wind_speed_pin_, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(wind_speed_pin_), isr_6410, FALLING);
 
+  state_ = idle;
   initialised_ = true;
+
+  // Interrupts enabled.
+  sei();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Start a ne sample.
 // The callback will be called when the sample is ready.
 // --------------------------------------------------------------------------------------------------------------------
-void davis6410::start_sample(windsamplefn fn)
-{
-  sample_fn_ = fn;
+bool davis6410::start_sample(windsamplefn fn) {
+  // Must be initialised and idle.
+  if (!initialised_ || state_ != idle) return false;
 
+  sample_fn_ = fn;
   state_ = new_sample;
+
+  return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Service the interface.
 // --------------------------------------------------------------------------------------------------------------------
 void davis6410::service() {
-
   switch (state_) {
-
     case idle: {
-        break;
-      }
+      break;
+    }
 
     case new_sample: {
-        // Start a new sample off, txd interrupts enabled.
-        wind_speed_pulse_counter = 0;
-        sample_start_time_ = millis();
-        sei();
+      // Start a new sample off.
+      wind_speed_pulse_counter = 0;
+      sample_start_time_ = millis();
 
-        break;
-      }
+      state_ = sampling_speed;
 
-    case sampling_speed:
+      break;
+    }
+
+    case sampling_speed: {
       // Check if the sample frame has finished.
       if (millis() - sample_start_time_ >= sample_period_) {
-        // Stop interrupts and then read the wind speed in mph.
-        cli();
-        wind_speed_ = calculate_wind_mph(wind_speed_pulse_counter);
-
+        sample_pulse_count_ = wind_speed_pulse_counter;
+        
         // Sample the wind direction.
         state_ = sampling_direction;
       }
 
       break;
+    }
 
     case sampling_direction: {
-        // Read the wind direction directly.
-        int drn = analogRead(wind_vane_pin_);
-        Serial.println(drn);
-        wind_direction_ = (drn + 31) >> 6;
+      // Read the wind direction directly.
+      sample_direction_ = analogRead(wind_vane_pin_);
 
-        state_ = send_frame;
+      state_ = send_frame;
 
-        break;
-      }
+      break;
+    }
 
     case send_frame: {
-        // Let the client knowthe sampled wind speed and direction.
-        sample_fn_(wind_speed_, wind_direction_);
+      // Ready for another sample.
+      state_ = idle;
 
-        state_ = idle;
+      // Let the client knowthe sampled wind speed and direction.
+      sample_fn_(get_wind_mph(), get_wind_direction());
 
-        break;
-      }
+      break;
+    }
   }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Sample the wind speed.
-// Returns the speed in mpp.
+// Return the last sampled wind speed.
+// The calcualtion from pulse count to mph uses the formula V=P(2.25/T). If we
+// find that it is not accurate enough we could use calibration tables etc for
+// greateer accuracy.
 // --------------------------------------------------------------------------------------------------------------------
-// float davis6410::sample_wind_mph() const {
-//   // Must be intialsied first.
-//   if (!initialised_) return 0;
-
-//   // Start a new sample frame.
-//   wind_speed_pulse_counter = 0;
-
-//   // We're only interested in the speed to the nearest mph so using delay()
-//   // should be accurate enough.
-//   sei();
-//   delay(k_wind_speed_sample_t);
-//   cli();
-
-//   return calculate_wind_mph(wind_speed_pulse_counter);
-// }
+float davis6410::get_wind_mph() const {
+  return sample_pulse_count_ * 2.25f * 1000.f / static_cast<float>(sample_period_);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
-// Sample the wind direction.
-// Returns the direction using 16 directions, 0 is North, 4 is East etc.
+// Return the last sampled wind direction.
+// The calcualtio from pulse count to mph uses the formula V=P(2.25/T). If we
+// find that it is not accurate enough we could use calibration tables etc for
+// greateer accuracy.
 // --------------------------------------------------------------------------------------------------------------------
-// int davis6410::sample_wind_direction() const
-// {
-//   int drn = analogRead(wind_vane_pin_);
-//   Serial.println(drn);
-//   drn = (drn + 31) >> 6;
-
-//   return drn;
-// }
-
-// --------------------------------------------------------------------------------------------------------------------
-// Convert wind speed pulse count to kph.
-// This is done as a function so that in future, it will be easy to add a look
-// up table for calibrating the anenometer if we think it needs one. For now,
-// though, we assume that the formula V=P(2.25/T) given in the spec is correct.
-// --------------------------------------------------------------------------------------------------------------------
-float davis6410::calculate_wind_mph(uint8_t pulses) const {
-  float v_mph =
-    pulses * 2.25f * 1000.f / static_cast<float>(k_wind_speed_sample_t);
-
-  return v_mph;
+int davis6410::get_wind_direction() const {
+  return (sample_direction_ + 31) >> 6;
 }

@@ -9,9 +9,9 @@ davis6410 wind_meter;
 
 
 void log_wind_sample(float mph, int direction) {
-  Serial.print("wind speed: mph=");
+  Serial.print(F("wind speed: mph="));
   Serial.print(mph);
-  Serial.print(", direction=");
+  Serial.print(F(", direction="));
   Serial.println(direction);
 
   // Start another wind sample off.
@@ -21,6 +21,10 @@ void log_wind_sample(float mph, int direction) {
 void setup() {
 
   Serial.begin(9600);
+
+  Serial.println(F(""));
+  Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0"));
+  Serial.println(F(""));
 
   // The 6410 interface must be initialised before use.
   wind_meter.initialise();

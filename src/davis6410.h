@@ -4,6 +4,9 @@
 // The wind meter measures wind speed and direction. The speed is measured by counting pulses prodcued by a
 // reed switch, and the direction is encoded by a 20KOhm potentiometer.
 // --------------------------------------------------------------------------------------------------------------------
+#pragma once
+
+#include <Arduino.h>
 
 // The default pin for the wind sensor.
 // Pin 2 is used because falling edge interrupts are used.
@@ -43,7 +46,16 @@ class davis6410 {
 
   // Start a ne sample.
   // The callback will be called when the sample is ready.
-  void start_sample(windsamplefn fn);
+  // Returns true if the sample was started, false otherwise.
+  bool start_sample(windsamplefn fn);
+
+  // Return the last sampled wind speed.
+  float get_wind_mph() const;
+
+  // Return the last sampled wind direction.
+  // Returns the direction as 0=N, E=4 etc.
+  int get_wind_direction() const;
+
 
   // Sample the wind speed.
   // The pulses from the Davis are counted over the sampling period and
@@ -83,11 +95,11 @@ class davis6410 {
   // This is the start time in milliseconds of the current sample frame.
   unsigned long sample_start_time_;
 
-  // This is the last read wind speed.
-  float wind_speed_;
-
-  // This is the last read wind direction.
-  int wind_direction_;
+  // This is the pulse count for the last sample frame.
+  uint8_t sample_pulse_count_;
+  
+  // This is the last analogue reading for the wind direction.
+  int sample_direction_;
 
   // The wind sample callback function.
   windsamplefn sample_fn_ = nullptr;
