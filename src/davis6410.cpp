@@ -54,7 +54,7 @@ void davis6410::initialise() {
   pinMode(wind_speed_pin_, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(wind_speed_pin_), isr_6410, FALLING);
 
-  state_ = idle;
+  state_ = davis6410state::idle;
   initialised_ = true;
 
   // Interrupts enabled.
@@ -65,14 +65,43 @@ void davis6410::initialise() {
 // Start a ne sample.
 // The callback will be called when the sample is ready.
 // --------------------------------------------------------------------------------------------------------------------
-bool davis6410::start_sample(windsamplefn fn) {
+bool davis6410::start_sample(windsamplefn fn, void* context) {
   // Must be initialised and idle.
-  if (!initialised_ || state_ != idle) return false;
+  if (!initialised_ || state_ != davis6410state::idle) return false;
 
   sample_fn_ = fn;
-  state_ = new_sample;
+  context_ = context;
+  
+  state_ = davis6410state::new_sample;
 
   return true;
+}
+
+void x()
+{
+  davis6410 n;
+  auto s = n.state();
+}
+// --------------------------------------------------------------------------------------------------------------------
+// Abort the current sample if there is one in progress.
+// --------------------------------------------------------------------------------------------------------------------
+void davis6410::abort_sample() {
+  // Must be initialised.
+  if (!initialised_) return;
+
+  switch (state_) {
+    
+    case davis6410state::idle: break;
+
+    case davis6410state::new_sample:
+    case davis6410state::sampling_speed:
+    case davis6410state::sampling_direction:
+    case davis6410state::send_frame: {
+      sample_fn_ = nullptr;
+      state_ = davis6410state::idle;
+      break;
+    }
+  }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -80,47 +109,47 @@ bool davis6410::start_sample(windsamplefn fn) {
 // --------------------------------------------------------------------------------------------------------------------
 void davis6410::service() {
   switch (state_) {
-    case idle: {
+    case davis6410state::idle: {
       break;
     }
 
-    case new_sample: {
+    case davis6410state::new_sample: {
       // Start a new sample off.
       wind_speed_pulse_counter = 0;
       sample_start_time_ = millis();
 
-      state_ = sampling_speed;
+      state_ = davis6410state::sampling_speed;
 
       break;
     }
 
-    case sampling_speed: {
+    case davis6410state::sampling_speed: {
       // Check if the sample frame has finished.
       if (millis() - sample_start_time_ >= sample_period_) {
         sample_pulse_count_ = wind_speed_pulse_counter;
-        
+
         // Sample the wind direction.
-        state_ = sampling_direction;
+        state_ = davis6410state::sampling_direction;
       }
 
       break;
     }
 
-    case sampling_direction: {
+    case davis6410state::sampling_direction: {
       // Read the wind direction directly.
       sample_direction_ = analogRead(wind_vane_pin_);
 
-      state_ = send_frame;
+      state_ = davis6410state::send_frame;
 
       break;
     }
 
-    case send_frame: {
+    case davis6410state::send_frame: {
       // Ready for another sample.
-      state_ = idle;
+      state_ = davis6410state::idle;
 
-      // Let the client knowthe sampled wind speed and direction.
-      sample_fn_(get_wind_mph(), get_wind_direction());
+      // Let the client know the sampled wind speed and direction.
+      if (sample_fn_) sample_fn_(context_);
 
       break;
     }
@@ -134,7 +163,8 @@ void davis6410::service() {
 // greateer accuracy.
 // --------------------------------------------------------------------------------------------------------------------
 float davis6410::get_wind_mph() const {
-  return sample_pulse_count_ * 2.25f * 1000.f / static_cast<float>(sample_period_);
+  return sample_pulse_count_ * 2.25f * 1000.f /
+         static_cast<float>(sample_period_);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
