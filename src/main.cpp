@@ -23,7 +23,7 @@ void log_wind_sample(float mph, int direction) {
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   Serial.println(F(""));
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0"));
@@ -33,9 +33,6 @@ void setup() {
   wind_meter.initialise();
   tx20_eumlator.initialise(&wind_meter);
 
-  // Start the 1st wind sample off.
-  // From then off samples are auto triggered.
-  // wind_meter.start_sample(log_wind_sample);
 }
 
 void loop() {

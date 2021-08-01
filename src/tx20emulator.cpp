@@ -60,6 +60,7 @@ void tx20emulator::initialise(windmeterintf* wind_meter) {
   digitalWrite(LED_BUILTIN, LOW);
 
   // dtr needs to be pulled low for the tx20 to be active.
+  // dtr is sinked low to enable the tx20.
   pinMode(dtr_pin_, INPUT_PULLUP);
 
   // The frame bits are transmitted on txd.
@@ -144,7 +145,7 @@ void tx20emulator::service() {
 
       // Check if dtr is still low, and if not disable the tx20.
       // Otherwise continue with another sample.
-      if (digitalRead(dtr_pin_))
+      if (read_dtr())
         set_state(tx20state::disabled);
       else
         set_state(tx20state::start_sample);
@@ -210,7 +211,7 @@ void tx20emulator::write_frame(float mph, int direction) const {
                  ", direction=" + String(direction));
 
   // Need to convert the wind speed from mph to 0.1 ms-1.
-  int units = round(mph * 1.609344 / 1000.f * 10.f);
+  int units = round(mph * 1.609344 * 1000.f * 10.f / 3600.f);
 
   // The first half of the frame uses normal bits and the second uses inverted
   // bits.
