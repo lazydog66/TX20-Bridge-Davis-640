@@ -11,14 +11,6 @@
 
 #include "windmeterintf.h"
 
-// The default pin for the wind sensor.
-// Pin 2 is used because falling edge interrupts are used.
-constexpr int k_wind_sensor_pin = 2;
-
-// The default pin for the wind vane.
-// The pin must be an analogue pin.
-constexpr int k_wind_direction_pin = A0;
-
 // This is the default duration over which the wind speed is calculated.
 // The anenometer's spec says the minimum wind speed is 1 mph which is 1
 // revolution per 2.25 seconds, so 2.25 seconds seems like a reasonable amount
@@ -29,7 +21,7 @@ constexpr unsigned long k_wind_speed_sample_t = 2250;
 // The state for the 6410.
 //    idle - the 6410 is doing nothing
 //    new_sample - a new sample has been requested
-//    sampling_speed - 
+//    sampling_speed -
 enum class davis6410state {
   idle,
   new_sample,
@@ -45,8 +37,7 @@ class davis6410 : public windmeterintf {
   // minimum wind speed is 1 mph which is 1 revolution per 2.25 seconds, so
   // 2.25 seconds for the period has the advantage that the returned pulse count
   // is the wind speed in mph.
-  davis6410(int wind_sensor_pin = k_wind_sensor_pin,
-            int wind_direction_pin = k_wind_direction_pin,
+  davis6410(int wind_sensor_pin, int wind_direction_pin,
             unsigned long sample_period = 2250);
 
   // Initialise the hardware resources and set up the isr.

@@ -7,9 +7,9 @@ led::led(uint8_t pin, bool state)
   :led_pin_{pin}, mode_{state ? ledmode::on : ledmode::off}
 {
   pinMode(pin, OUTPUT);
-
-  if (state) set(true);
-  else set(false);
+  
+  if (state) on();
+  else off();
 }
 
 // ------------------------------------------------------------------------------------------------

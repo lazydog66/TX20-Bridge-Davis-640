@@ -10,12 +10,6 @@
 
 #include <Arduino.h>
 
-// Default to using pin 3 for the Dtr line.
-constexpr int k_dtr_pin = 3;
-
-// Default to using pin 4 for the Txd line.
-constexpr int k_txd_pin = 4;
-
 // These are the events emitted by the tx20 emulator.
 enum class tx20event {
   start_sample,
@@ -49,7 +43,7 @@ const char* winddrn_to_string(int drn);
 class tx20emulator {
 
 public:
-  tx20emulator(int dtr_pin = k_dtr_pin, int txt_pin = k_txd_pin);
+  tx20emulator(int dtr_pin, int txt_pin);
 
   // Initialise the resources used by the emulator and set the event handler.
   // Must be done before the eumlator can be used.
