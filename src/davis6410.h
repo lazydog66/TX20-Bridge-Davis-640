@@ -65,15 +65,6 @@ class davis6410 : public windmeterintf {
   // Return the state of the Davis 6410.
   davis6410state state() const { return state_; }
 
-  // Sample the wind speed.
-  // The pulses from the Davis are counted over the sampling period and
-  // converted to mph.
-  // float sample_wind_mph() const;
-
-  // // Sample the wind direction.
-  // // Returns (0, 15) where 0 is North, 4 is East etc.
-  // int sample_wind_direction() const;
-
  private:
   // Convert pulses to mph.
   // Note, this may in the future apply calibration data to the result.
