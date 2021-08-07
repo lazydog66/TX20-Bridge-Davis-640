@@ -171,3 +171,12 @@ float davis6410::get_wind_mph() const {
 int davis6410::get_wind_direction() const {
   return (sample_direction_ + 31) >> 6;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// Return the last sampled anenometer pulse count.
+// Each pulse is one revolution of the wind cups.
+// --------------------------------------------------------------------------------------------------------------------
+uint8_t davis6410::get_pulses() const {
+  return sample_pulse_count_;
+}
+

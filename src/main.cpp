@@ -59,10 +59,12 @@ void tx20_event_handler(tx20event event) {
     case tx20event::end_sample: {
         // At this point, the wind has been sampled and the data sent on Txd.
         // As an example, the wind sample is logged to the console.
+        uint8_t pulses = wind_meter.get_pulses();
         float mph = wind_meter.get_wind_mph();
         int direction = wind_meter.get_wind_direction();
 
-        Serial.print(String(F("wind speed: mph=")) + String(mph));
+        Serial.print(String(F("pulses=")) + String(pulses));
+        Serial.print(String(F(", mph=")) + String(mph));
         Serial.println(String(F(", direction=")) + String(direction));
 
         break;
