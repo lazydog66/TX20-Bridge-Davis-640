@@ -282,8 +282,10 @@ void tx20emulator::write_frame(float mph, int direction) const {
   }
 
   // That's the end of the data frame.
-  // What we do here is write a few moreend bits to give
-  // whatever is reading the data time to do something with Dtr.
+  // What we do here is write a few more end bits to give whatever is reading Txd some
+  // time to decide what to do with Dtr. If Dtr is left low then another capture phase
+  // will be entered, but on the other hand if Dtr is allowed to float high then a
+  // the sampling is disabled and Txd will go high.
   for (int i = 0; i < 10; ++i) write_txd(LOW);
 }
 
