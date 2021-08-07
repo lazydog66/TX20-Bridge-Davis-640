@@ -27,6 +27,9 @@ constexpr int k_wind_direction_pin = A0;
 constexpr int k_dtr_pin = 3;
 constexpr int k_txd_pin = 4;
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+
 // Create the interface for reading the 6410.
 // We'll use the default sampling period which is 2250 milliseconds. This is a convenient
 // duration because it means that the wind speed in mph is simply the number of pulses in the sample.
@@ -37,7 +40,6 @@ tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
 
 // Create the controller for the front panel led.
 led panel_led(k_front_panel_ped_pin);
-
 
 // ------------------------------------------------------------------------------------------------
 // This is the event handler for the tx20 emulator events.
@@ -57,10 +59,12 @@ void tx20_event_handler(tx20event event) {
     case tx20event::end_sample: {
         // At this point, the wind has been sampled and the data sent on Txd.
         // As an example, the wind sample is logged to the console.
+        uint8_t pulses = wind_meter.get_pulses();
         float mph = wind_meter.get_wind_mph();
         int direction = wind_meter.get_wind_direction();
 
-        Serial.print(String(F("wind speed: mph=")) + String(mph));
+        Serial.print(String(F("pulses=")) + String(pulses));
+        Serial.print(String(F(", mph=")) + String(mph));
         Serial.println(String(F(", direction=")) + String(direction));
 
         break;
@@ -85,6 +89,10 @@ void setup() {
   Serial.println(F(""));
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
   Serial.println(F(""));
+
+  // panel_led.on();
+  // delay(3000);
+  // panel_led.off();
 
   // The 6410 interface  and tx20 emulator must be initialised before use.
   wind_meter.initialise();
