@@ -1,19 +1,25 @@
+// ------------------------------------------------------------------------------------------------
+// This is a simple class for controlling an led on one of the digital io pins.
+// An led can be turned on, off or flahsed. After creating an led instance, call
+// service() from the main loop. This will ensure that flash() works smoothly.
+// ------------------------------------------------------------------------------------------------
+
 #include "led.h"
 
 // ------------------------------------------------------------------------------------------------
-// Constructor set the io poin for the led.
+// Constructor sets the io poin for the led.
 // ------------------------------------------------------------------------------------------------
 led::led(uint8_t pin, bool state)
   :led_pin_{pin}, mode_{state ? ledmode::on : ledmode::off}
 {
   pinMode(pin, OUTPUT);
-  
+
   if (state) on();
   else off();
 }
 
 // ------------------------------------------------------------------------------------------------
-// Destructor ensures teh led is off.
+// Destructor ensures the led is turned off.
 // ------------------------------------------------------------------------------------------------
 led::~led()
 {
