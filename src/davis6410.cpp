@@ -1,3 +1,10 @@
+// ------------------------------------------------------------------------------------------------
+// This is a controller class for interfacing to a Davis6410 anemometer and wind vane.
+// The interface requires one digitial io pin (capable of falling edge interrupts) and
+// an analog pin. The anemometer is read by counting pulses on the io pin and converting
+// the number of pulses per second to mph. The wind vane is read by reading the voltage on
+// the analog pin and mapping the value to 16 wind directions.
+// ------------------------------------------------------------------------------------------------
 #include "davis6410.h"
 
 #include <math.h>
@@ -6,21 +13,19 @@ using microseconds_t = unsigned long;
 using milliseconds_t = unsigned long;
 
 // Debounce period for the wind speed pulses.
-// At 200 mph we have 1 pulse per 11.26 ms. With a realistic max wind speed of
-// 130 mph we can expect a pulse every 17.32 ms. Therefore a debounce period of
-// less than 17 ms should suffice.
+// Information on the web suggests that the debounce period for a reed switch
+// is around 1 ms. At 200 mph we have 1 pulse per 11.26 ms (for a 2.25 second sample
+// period), hece something in the range 1 to 20 ms will do.
 constexpr milliseconds_t k_wind_pulse_debounce = 10;
 
 // The counter for the wind pulses.
 // The anenometer spins at 1600 rev/hrs at 1 mph, or 0.444r pulses per second
-// per 1 mph. For a max speed of 200 mph this works out 88.888r pulses per
-// second or 222.222r pulses in a 2.5 second sampling period. An 8 bit counter
-// should be more than sufficient.
+// per 1 mph. This means an 8 bit counter should easily suffice for our needs.
+// Using an 8 bit counter has the advantage that we dont need to disable interrutps
+// when reading or clearing the counter.
 static volatile uint8_t wind_speed_pulse_counter = 0;
 
-// At 200 mph we have 1 pulse per 11.26 ms. With a realistic max wind speed of
-// 130 mph we can expect a pulse every 17.32 ms. Therefore a debounce period of
-// less than 17 ms should suffice.
+// This variable is needed to debounce the reed switch.
 static volatile milliseconds_t debounce_start_t = 0;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,8 +52,7 @@ davis6410::davis6410(int wind_speed_pin, int wind_vane_pin,
 
 // --------------------------------------------------------------------------------------------------------------------
 // The isr for servicing the wind speed reading.
-// The variable debounce_start_t should be cleared before the first interrupt of
-// a sample period.
+// The variable debounce_start_t should be cleared before the first interrupt of a sample period.
 // --------------------------------------------------------------------------------------------------------------------
 void davis6410::initialise() {
   pinMode(wind_speed_pin_, INPUT_PULLUP);
@@ -62,7 +66,7 @@ void davis6410::initialise() {
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Start a ne sample.
+// Start a new sample.
 // The callback will be called when the sample is ready.
 // --------------------------------------------------------------------------------------------------------------------
 bool davis6410::start_sample(windsamplefn fn, void* context) {
@@ -71,7 +75,7 @@ bool davis6410::start_sample(windsamplefn fn, void* context) {
 
   sample_fn_ = fn;
   context_ = context;
-  
+
   state_ = davis6410state::new_sample;
 
   return true;
@@ -85,7 +89,7 @@ void davis6410::abort_sample() {
   if (!initialised_) return;
 
   switch (state_) {
-    
+
     case davis6410state::idle: break;
 
     case davis6410state::new_sample:

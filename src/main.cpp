@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 
 #include "davis6410.h"
@@ -12,7 +13,7 @@
 constexpr int k_front_panel_ped_pin = 9;
 
 // The front panel led is flashed for this number of milliseconds when a sample has been taken.
-constexpr uint16_t k_led_sample_flash_ms = 333; 
+constexpr uint16_t k_led_sample_flash_ms = 333;
 
 // The Davis 6410 interface uses two pins.
 // The wind sensor pin is used to count pulses from the anenometer using interrupts. We muse us

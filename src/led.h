@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------------------------------
+// This is a simple class for controlling an led on one of the digital io pins.
+// An led can be turned on, off or flahsed. After creating an led instance, call
+// service() from the main loop. This will ensure that flash() works smoothly.
+// ------------------------------------------------------------------------------------------------
 #pragma once
 
 #include <Arduino.h>

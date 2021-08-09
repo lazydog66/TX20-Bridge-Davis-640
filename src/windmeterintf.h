@@ -1,8 +1,12 @@
 // ------------------------------------------------------------------------------------------------
+//
 // This an interface class for wind meters.
 //
-// The idea is that is abstracts away the type of the wind meter in use so that, for example, the
-// tx20 emulator can work with different wind meters.
+// The idea is that is abstracts away the type of the wind meter used so that
+// the tx20 emulator can work with different wind meters other than the Davis 6410.
+//
+// If you want to use a different wind meter with the emulator, then your class needs
+// to implement start_sample(), abort_sample(), get_wid_mph() and get_wind_direction().
 // ------------------------------------------------------------------------------------------------
 #pragma once
 
