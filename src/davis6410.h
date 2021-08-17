@@ -63,7 +63,7 @@ class davis6410 : public windmeterintf {
   int get_wind_direction() const override;
 
   // Return the last sampled anenometer pulse count.
-  uint8_t davis6410::get_pulses() const;
+  uint8_t get_pulses() const;
 
   // Return the state of the Davis 6410.
   davis6410state state() const { return state_; }

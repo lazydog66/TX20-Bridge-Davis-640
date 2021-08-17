@@ -40,7 +40,8 @@ k_frame_interval - 0.5 * k_microseconds;
 constexpr int k_frame_bit_count = 41;
 
 // The length of a data bit in microseconds.
-constexpr duration k_frame_bit_length = 0.00122 * k_microseconds;
+constexpr duration k_frame_bit_length = 0.002 * k_microseconds;
+// constexpr duration k_frame_bit_length = 0.00122 * k_microseconds;
 
 // Frame duration in microseconds.
 constexpr duration k_frame_duration = k_frame_bit_count * k_frame_bit_length;
@@ -141,6 +142,8 @@ void tx20emulator::service() {
 
     case tx20state::sending: {
 
+static uint16_t frame_counter = 0;
+
         // The sending state is atomic, ie it starts and finishes in the same service call.
 
         // Raise the start event.
@@ -149,6 +152,10 @@ void tx20emulator::service() {
         // Send the tx20 data frame and then continue.
         float mph = wind_meter_->get_wind_mph();
         int direction = wind_meter_->get_wind_direction();
+
+mph = frame_counter * 4;
+frame_counter = (frame_counter + 1) % 12;
+
         write_frame(mph, direction);
 
         // Raise the end event.
