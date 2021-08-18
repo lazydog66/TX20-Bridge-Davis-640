@@ -142,8 +142,6 @@ void tx20emulator::service() {
 
     case tx20state::sending: {
 
-static uint16_t frame_counter = 0;
-
         // The sending state is atomic, ie it starts and finishes in the same service call.
 
         // Raise the start event.
@@ -152,9 +150,6 @@ static uint16_t frame_counter = 0;
         // Send the tx20 data frame and then continue.
         float mph = wind_meter_->get_wind_mph();
         int direction = wind_meter_->get_wind_direction();
-
-mph = frame_counter * 4;
-frame_counter = (frame_counter + 1) % 12;
 
         write_frame(mph, direction);
 
