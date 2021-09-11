@@ -227,7 +227,7 @@ void tx20emulator::raise_event(tx20event event) const {
 // ------------------------------------------------------------------------------------------------
 void tx20emulator::write_frame(float mph, int direction) const {
 
-  // Need to convert the wind speed from mph to 0.1 ms-1.
+  // Need to convert the wind speed from mph to units of  0.1 meters per second.
   int units = round(mph * 1.609344 * 1000.f * 10.f / 3600.f);
 
   // The first half of the frame uses normal bits and the second uses inverted
