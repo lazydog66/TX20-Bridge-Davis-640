@@ -18,6 +18,12 @@
 // integer number of 1 mph.
 constexpr unsigned long k_wind_speed_sample_t = 2250;
 
+// Debounce period for the wind speed pulses.
+// Information on the web suggests that the debounce period for a reed switch
+// is around 1 ms. At 200 mph we have 1 pulse per 11.26 ms (for a 2.25 second sample
+// period), hece something in the range 1 to 20 ms will do.
+constexpr unsigned long k_wind_pulse_debounce = 18;
+
 // The state for the 6410.
 //    idle - the 6410 is doing nothing
 //    new_sample - a new sample has been requested

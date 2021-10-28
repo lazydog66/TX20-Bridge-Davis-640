@@ -90,6 +90,9 @@ void setup() {
   Serial.println(F(""));
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
   Serial.println(F(""));
+  Serial.println(String(F("speed sample T is ")) + String(k_wind_speed_sample_t)+ F(" ms"));
+  Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce)+ F(" ms"));
+  Serial.println(F(""));
 
   // panel_led.on();
   // delay(3000);

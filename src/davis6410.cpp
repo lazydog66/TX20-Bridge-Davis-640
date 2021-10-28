@@ -12,12 +12,6 @@
 using microseconds_t = unsigned long;
 using milliseconds_t = unsigned long;
 
-// Debounce period for the wind speed pulses.
-// Information on the web suggests that the debounce period for a reed switch
-// is around 1 ms. At 200 mph we have 1 pulse per 11.26 ms (for a 2.25 second sample
-// period), hece something in the range 1 to 20 ms will do.
-constexpr milliseconds_t k_wind_pulse_debounce = 10;
-
 // The counter for the wind pulses.
 // The anenometer spins at 1600 rev/hrs at 1 mph, or 0.444r pulses per second
 // per 1 mph. This means an 8 bit counter should easily suffice for our needs.
@@ -55,7 +49,7 @@ davis6410::davis6410(int wind_speed_pin, int wind_vane_pin,
 // The variable debounce_start_t should be cleared before the first interrupt of a sample period.
 // --------------------------------------------------------------------------------------------------------------------
 void davis6410::initialise() {
-  pinMode(wind_speed_pin_, INPUT_PULLUP);
+  pinMode(wind_speed_pin_, INPUT);
   attachInterrupt(digitalPinToInterrupt(wind_speed_pin_), isr_6410, FALLING);
 
   state_ = davis6410state::idle;
