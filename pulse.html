@@ -1,0 +1,304 @@
+<div style="width: 800px">
+    <p>
+        This is a quick check for a pulse detection function. A signal is generated (orange trace) and then
+        noise is added (green trace). The signal is then run through the pulse detector and the positions of
+        the pulses are drawn (magenta circles). For the actual signal from the Davis 6410, the pulses seem to
+        have roughly, a fixed width regardless of their frequency. Also, the pulse singal level go down all the
+        way to 0 volts which makes their detection easier. I think the noise mostly affects the non pulse part
+        of the signal, but in this test I've added a bit of noise to the pulse just to see if the filter can handle it.
+    </p>
+    <p>
+        A simple moving average filter is used to detect the pulses. It assumes samples are taken at
+        regular intervals, and that the pulses have a minimum width (but it does not assume a maximum width to the
+        pulse). Also, the filter applies a bit of debounce, ie there needs to be a minimum number of samples between
+        adjacent pulses for a pulse to be detected.
+    </p>
+</div>
+
+<canvas id='trace' width=640 height=400 style="border:4px black solid"></canvas>
+
+
+<script>
+
+    // 
+    // This class is a moving average filter.
+    //
+    // Signals are filtered by pushing each sample through the filter.
+    // At any time, the moving average can be read back though the first few filtered values should be ignored.
+    //
+    class MovingAverage {
+
+        //
+        // Construct a moving average filter with a defined width (measured in samples).
+        //
+        constructor(width) {
+            // How many samples make up the moving average
+            this.width = width;
+
+            // The current sum of the samples.
+            this.sum = 0;
+
+            // Index of the oldest sample, and also the index of the next insertion
+            this.index = 0;
+
+            // Note, this moving average starts off with a moving average of 0.
+            this.samples = Array.apply(null, Array(width)).map(() => 0);
+        }
+
+        // Clear the moving average ready for another sample set.
+        clear() {
+            this.sum = 0;
+            this.index = 0;
+            this.samples = this.samples.map(() => 0);
+        }
+
+        //
+        // Return the current value of the moving average.
+        // Note, the moving average isn't valid until 'width' samples have been taken
+        average() {
+            return this.sum / this.width;
+        }
+
+        //
+        // Push a new sample into the moving average.
+        //
+        push(value) {
+
+            // Pop the oldest value and adjust the sum.
+            this.sum -= this.samples[this.index];
+
+            // Push the new value.
+            this.samples[this.index] = value;
+            this.index = (this.index + 1) % this.width;
+
+            // Adjust the sum.
+            this.sum += value;
+        }
+    }
+
+    class Pulsar {
+
+        // Construct the pulse filter.
+        //
+        // leadWidth - minimum lead time before a pulse, measure in samples count
+        // pulseWidth - minimimum width of the pulse, measured in samples count
+        // lowLevel - threshold for logic low, range [0, 255]
+        //
+        // debounce ->|<- min pulse width ->|
+        // ************                     **********
+        //            *                     *
+        //            *                     *
+        //            ***********************
+        //
+        constructor(pulseWidth, debounceWidth, lowLevel, movingAverageMax, pulseFn) {
+            this.pulseWidth = pulseWidth;
+            this.debounceWidth = debounceWidth;
+            this.lowLevel = lowLevel;
+            this.movingAverageMax = movingAverageMax;
+            this.pulseFn = pulseFn;
+
+            // Keep track of the sample indices.
+            this.index = 0;
+
+            // Keep track of the index of the last pulse, used for debounce.
+            this.pulseIndex = 0;
+
+            // The moving averages for the pulse lead in, ie the 1st run of * in the pulse below.
+            this.movingAverage = new MovingAverage(this.pulseWidth);
+        }
+
+        //
+        // Clear the filter ready for a new session.
+        //
+        clear() {
+            this.index = 0;
+            this.pulseIndex = 0;
+            this.movingAverage.clear();
+        }
+
+        //
+        // Accept a new sample.
+        //
+        processSample(value) {
+
+            // Clean up the sample value.
+            // Note the moving average uses inverted logic.
+            value = value <= this.lowLevel ? 1 : 0;
+
+            // Add this sample into the moving average buffer.
+            this.movingAverage.push(value);
+
+            // Calculate the moving average, if it's equal to one then we've detected a pulse.
+            const average = this.movingAverage.average();
+            const havePulse = average >= this.movingAverageMax;
+
+            if (havePulse) {
+                if (this.index - this.pulseIndex >= this.debounceWidth)
+                    if (this.pulseFn) this.pulseFn(this.index);
+
+                this.pulseIndex = this.index;
+            }
+
+            ++this.index;
+        }
+    }
+
+
+    // 
+    // Clear the samples trace view.
+    //
+    function clearTrace() {
+        ctx.fillStyle = 'black';
+        ctx.rect(0, 0, canvasWidth, canvasHeight);
+        ctx.fill();
+    }
+
+    //
+    // Draw a set of pulse points.
+    //
+    // A pulse point is defined by its x-coordinate, ie sample index value.
+    //
+    function drawPulsePoints(pulses, yOffset, style) {
+
+        ctx.save();
+
+        ctx.translate(0, canvasHeight);
+        ctx.scale(1, -1);
+
+        ctx.fillStyle = style;
+
+        pulses.forEach(point => {
+
+            const x = point;
+            const y = yOffset;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        ctx.restore();
+    }
+
+
+    //
+    // Draw a trace o n samples.
+    //
+    // The samples should have range [0, 255].
+    function drawTrace(samples, style = 'green') {
+
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.strokeStyle = style;
+        ctx.translate(0, canvasHeight);
+        ctx.scale(1, -canvasHeight / 255.0);
+
+        ctx.moveTo(0, samples[0]);
+        samples.forEach((sample, index) =>
+            ctx.lineTo(index, sample)
+        );
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+
+    //
+    // This functions adds noise to a sample set.
+    //
+    // Random noise is added by setting a smaple to 0 if rand() < n where n is [0, 1[.
+    //
+    function addNoiseToPulse(samples, f) {
+
+        const noised = samples.map(sample => {
+            // Add noise on non pulse part of signal.
+            const noiseValue = Math.pow(Math.random(), 2);
+            let noisySample = sample * (Math.random() <= f ? noiseValue : 1.0);
+
+            // Add noise on pulse part of signal.
+            if (true)
+                noisySample = noisySample + 255 * Math.pow(Math.random(), 10) * 0.1;
+
+            return Math.min(noisySample, 255);
+        });
+
+        return noised;
+    }
+
+
+    // 
+    // Generate a sample set on a pulse waveform.
+    //
+    // The waveform is generated by sampling a sine wave using a threshold value.
+    // If a sample is <= the threshold, then the sample is set to 0, otherwise 1.
+    //      n is the number of pulses, and n is the threshold
+    //
+    function generatePulses(n, min) {
+        const samples = generateSineWave(n);
+        const pulses = samples.map(y => y <= min ? 0 : 255);
+
+        return pulses;
+    }
+
+
+    //
+    // Generate a sine wave with wavelength 1/n.
+    //
+    function generateSineWave(cycles = 1) {
+        return generateSamples(t => (255.0 + 255.0 * Math.sin(2.0 * Math.PI * t * cycles)) * 0.5);
+    }
+
+    //
+    // Generate test sample data in the t range [0, 1[.
+    //
+    // This function is used to generate the sample points over t interval [0, 1[.
+    // The actual form of the wave is generated by the callback function which
+    // returns the sample value for a given t.
+    //
+    function generateSamples(fn) {
+        const samples = [];
+
+        for (let i = 0; i < canvasWidth; ++i)
+            samples.push(fn(i / canvasWidth));
+
+        return samples;
+    }
+
+
+    //
+    // Main entry point.
+    //
+    // Generate a signal with noise, and detect pulses. Then draw the singal and pulse points.
+    // Repeat the whole dreary thing.
+    //
+    const ctx = document.querySelector('#trace').getContext('2d');
+    const canvasWidth = ctx.canvas.width;
+    const canvasHeight = ctx.canvas.height;
+
+    console.log(ctx);
+
+    setInterval(() => {
+
+        // Generate the signal samples and also with noise.
+        const samples = generatePulses(5, 20);
+        const noise = addNoiseToPulse(samples, 0.5);
+
+        // Draw the signal, green for the noisy samples and orange for the noise free samples.
+        clearTrace();
+        drawTrace(noise, 'green');
+        drawTrace(samples, 'orange');
+
+        // Pass the signal through the filter, and draw the points where the pulses are deted.
+        const pulsePoints = [];
+        const pulsar = new Pulsar(20, 60, 10, 0.8, index => pulsePoints.push(index));
+        pulsar.clear();
+        noise.forEach(sample => pulsar.processSample(sample));
+        drawPulsePoints(pulsePoints, 40, 'magenta');
+
+    }, 10);
+
+
+
+</script>
