@@ -6,6 +6,14 @@
 constexpr uint32_t k_max_sample_rate = 31250;
 
 //
+// Initialise the adc tasks.
+//
+// The adc tasks run in the background on timer 1 interrupts.
+// Sampling frequency is determined by timer 1.
+//
+void init_adc_tasks();
+
+//
 // Set the current adc task.
 //
 // The background adc task isr calls the task whenever it has a new sample.
@@ -35,13 +43,15 @@ public:
 
   // Service the task.
   // Called by the background adc isr when each sample has been acquired.
-  virtual void service(uint8_t sample_value);
+  virtual void service(uint8_t sample_value) = 0;
 
 protected:
   adctask(uint8_t adc_pin);
 
   // Start a new task, eg a sample average task.
-  void start_task();
+  // Hooks the task into the background timer service.
+  // Derived classes should extend start() by doing whatever initialisation they need.
+  virtual void start();
 
 private:
 

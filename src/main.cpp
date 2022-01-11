@@ -4,6 +4,7 @@
 #include "davis6410.h"
 #include "tx20emulator.h"
 #include "led.h"
+#include "adctaskaverage.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -41,6 +42,9 @@ tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
 
 // Create the controller for the front panel led.
 led panel_led(k_front_panel_ped_pin);
+
+// Test for the adc average filter.
+adctaskaverage adc_average(A0);
 
 // ------------------------------------------------------------------------------------------------
 // This is the event handler for the tx20 emulator events.
@@ -101,6 +105,10 @@ void setup() {
   // The 6410 interface  and tx20 emulator must be initialised before use.
   wind_meter.initialise();
   tx20_emulator.initialise(&wind_meter, tx20_event_handler);
+
+  // Initialise the adc tasks and start the first sample off.
+  init_adc_tasks();
+  adc_average.start(255);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -112,4 +120,19 @@ void loop() {
   wind_meter.service();
   tx20_emulator.service();
   panel_led.service();
+
+static uint32_t count = 0;
+
+  if (adc_average.finished()) {
+
+    uint8_t sample = adc_average.average();
+    Serial.print(count);
+    Serial.print(". average = ");
+    Serial.println(sample);
+
+    // Start another sample off
+    adc_average.start(255);
+
+    ++count;
+  }
 }

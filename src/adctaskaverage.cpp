@@ -10,15 +10,13 @@ adctaskaverage::adctaskaverage(uint8_t adc_pin)
 
 void adctaskaverage::start(uint8_t n)
 {
-    cli();
-
     n_ = n;
     count_ = 0;
     sum_ = 0;
     ignore_ = k_ignore_samples_count;
     finished_ = 0;
 
-    sei();
+    adctask::start();
 }
 
 uint8_t adctaskaverage::average() const

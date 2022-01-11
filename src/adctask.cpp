@@ -25,6 +25,9 @@ static uint8_t next_adc_pin = 0;
 // The currently active adc task.
 static adctask *adc_task = nullptr;
 
+// This will be set to true if the adc tasks have been initialised.
+static bool adc_tasks_initialised = false;
+
 //
 // Utility function to start a new adc conversion.
 //
@@ -80,7 +83,7 @@ ISR(TIMER1_COMPA_vect)
 
     analog_trigger();
 
-    // Pass teh sample on to the current adc task.
+    // Pass the sample on to the current adc task.
     if (adc_task)
         adc_task->service(sample);
 }
@@ -168,9 +171,6 @@ static void init_adc_clock_prescaler(uint8_t value)
 //
 static void initialise_timer_and_adc()
 {
-    // Set up timer 1 interrupts.
-    noInterrupts();
-
     TCCR1A = 0;
     TCCR1B = 0;
     TCNT1 = 0;
@@ -181,7 +181,7 @@ static void initialise_timer_and_adc()
     TCCR1B |= (1 << CS11) | (1 << CS10);
     TIMSK1 |= (1 << OCIE1A);
 
-    // Make sure digital inputs are disabled on the adc channels.
+    // // Make sure digital inputs are disabled on the adc channels.
     // sbi(DIDR0, ADC0D);
     // sbi(DIDR0, ADC1D);
     // sbi(DIDR0, ADC2D);
@@ -194,24 +194,27 @@ static void initialise_timer_and_adc()
     // Speed up the adc clock divider.
     // The adc should be driven at a rate faster than the timer 1 interrupts.
     init_adc_clock_prescaler(k_adc_prescaler);
+}
 
-    // Initialise the adc by performing a conversion.
-    // According to the spec sheet, the first adc conversion takes 25 cycles as
-    // opposed to 13 for subsequent conversions. This is a bit of a problem
-    // because the adc task runs at 6250 Hz which is too fast for 25 cycles. By
-    // performing a conversion now we can initalise the adc and get the 25 cycle
-    // start up over with.
-    // analog_trigger(adc_select_pin);
-    // delay(1);
+void init_adc_tasks()
+{
+    if (adc_tasks_initialised)
+        return;
 
-    interrupts();
+    // Set timer 1 going and set teh adc pre scaler etc.
+    initialise_timer_and_adc();
 
     // Start the adc off in the background.
     analog_trigger();
+
+    adc_tasks_initialised = true;
 }
 
 void set_adc_task(adctask *task)
 {
+    if (!adc_tasks_initialised)
+        return;
+
     cli();
     adc_task = task;
     sei();
@@ -219,6 +222,9 @@ void set_adc_task(adctask *task)
 
 void clear_adc_task(adctask *task)
 {
+    if (!adc_tasks_initialised)
+        return;
+
     if (adc_task == task)
     {
         cli();
@@ -237,13 +243,13 @@ adctask::~adctask()
     clear_adc_task(this);
 }
 
-void adctask::start_task()
+void adctask::start()
 {
     cli();
 
     // Make this the current task.
     adc_task = this;
-    
+
     // Set up which adc channel we're sampling on.
     next_adc_pin = adc_pin_;
 
