@@ -44,7 +44,7 @@ tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
 led panel_led(k_front_panel_ped_pin);
 
 // Test for the adc average filter.
-adctaskaverage adc_average(A0);
+adctaskaverage adc_average(k_wind_direction_pin);
 
 // ------------------------------------------------------------------------------------------------
 // This is the event handler for the tx20 emulator events.
@@ -131,7 +131,7 @@ static uint32_t count = 0;
     Serial.println(sample);
 
     // Start another sample off
-    adc_average.start(255);
+    adc_average.start(239);
 
     ++count;
   }

@@ -33,15 +33,15 @@ private:
   uint8_t n_ = 1;
 
   // The current number of samples taken.
-  uint8_t count_ = 0;
+  volatile uint8_t count_ = 0;
 
   // The running sample sum.
-  uint16_t sum_ = 0;
+  volatile uint16_t sum_ = 0;
 
   // Ignore the first few samples.
   // This is because when starting a new average, the next sample may not
   // be accurate for various reasons, eg channel changed.
-  uint8_t ignore_ = 0;
+  volatile uint8_t ignore_ = 0;
 
   // Will be true when the task is finished.
   volatile bool finished_ = false;
