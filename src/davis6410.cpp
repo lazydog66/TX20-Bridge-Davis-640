@@ -1,69 +1,59 @@
-// ------------------------------------------------------------------------------------------------
 // This is a controller class for interfacing to a Davis6410 anemometer and wind vane.
 // The interface requires one digitial io pin (capable of falling edge interrupts) and
 // an analog pin. The anemometer is read by counting pulses on the io pin and converting
 // the number of pulses per second to mph. The wind vane is read by reading the voltage on
 // the analog pin and mapping the value to 16 wind directions.
-// ------------------------------------------------------------------------------------------------
-#include "davis6410.h"
 
+#include <Arduino.h>
 #include <math.h>
+
+#include "davis6410.h"
+#include "fallingedgetask.h"
+#include "adctask.h"
+#include "samplecounter.h"
+#include "average.h"
+#include "pulsar.h"
 
 using microseconds_t = unsigned long;
 using milliseconds_t = unsigned long;
 
-// The counter for the wind pulses.
-// The anenometer spins at 1600 rev/hrs at 1 mph, or 0.444r pulses per second
-// per 1 mph. This means an 8 bit counter should easily suffice for our needs.
-// Using an 8 bit counter has the advantage that we dont need to disable interrutps
-// when reading or clearing the counter.
-static volatile uint8_t wind_speed_pulse_counter = 0;
+davis6410::davis6410(davis6410method method, int wind_speed_pin, int wind_vane_pin, unsigned long sample_period)
+    : wind_speed_pin_{wind_speed_pin}, wind_vane_pin_{wind_vane_pin}, sample_period_{sample_period}
+{
+  // Create the task for reading the wind direction.
+  // The wind direction is read by reading the analog value on the wind vane pin.
+  wind_direction_task_ = new adctask(new average(k_wind_direction_average_n), wind_vane_pin);
 
-// This variable is needed to debounce the reed switch.
-static volatile milliseconds_t debounce_start_t = 0;
+  // The pulses on the wind speed line are counted as they arrive.
+  // The pulse rate defines the measured wind speed.
+  wind_pulse_counter_ = new samplecounter(k_wind_speed_sample_t);
 
-// --------------------------------------------------------------------------------------------------------------------
-// The isr for servicing the wind speed reading.
-// The variable debounce_start_t should be cleared before the first interrupt of
-// a sample period.
-// --------------------------------------------------------------------------------------------------------------------
-static void isr_6410() {
-  milliseconds_t now = millis();
-  if (now - debounce_start_t >= k_wind_pulse_debounce) {
-    ++wind_speed_pulse_counter;
-    debounce_start_t = now;
+  // Create the task for reading the wind speed.
+  // There are two alternative ways of reading the wind speed, adc and falling edge interrupts.
+  switch (method) {
+    // The adc method requires an adc task and the pulsar filter.
+    case davis6410method::adc: {
+      filter *sample_filter = new pulsar(k_wind_pulse_width, k_wind_pulse_debounce, k_wind_pulse_low_level, k_wind_pulse_noise_factor, []() {});
+      wind_speed_task_ = new adctask(sample_filter, wind_speed_pin);
+      break;
+    }
+
+    // The falling edge method requires a falling edge task and sample counter.
+    case davis6410method::falling_edge: {
+      wind_speed_task_ = new fallingedgetask(wind_pulse_counter_, wind_speed_pin);
+      break;
+    }
   }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Constructor does not initialise the hardware.
-// --------------------------------------------------------------------------------------------------------------------
-davis6410::davis6410(int wind_speed_pin, int wind_vane_pin,
-                     unsigned long sample_period)
-    : wind_speed_pin_{wind_speed_pin},
-      wind_vane_pin_{wind_vane_pin},
-      sample_period_{sample_period} {}
-
-// --------------------------------------------------------------------------------------------------------------------
-// The isr for servicing the wind speed reading.
-// The variable debounce_start_t should be cleared before the first interrupt of a sample period.
-// --------------------------------------------------------------------------------------------------------------------
-void davis6410::initialise() {
-  pinMode(wind_speed_pin_, INPUT);
-  attachInterrupt(digitalPinToInterrupt(wind_speed_pin_), isr_6410, FALLING);
-
+void davis6410::initialise()
+{
   state_ = davis6410state::idle;
   initialised_ = true;
-
-  // Interrupts enabled.
-  sei();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Start a new sample.
-// The callback will be called when the sample is ready.
-// --------------------------------------------------------------------------------------------------------------------
-bool davis6410::start_sample(windsamplefn fn, void* context) {
+bool davis6410::start_sample(windsamplefn fn, void *context)
+{
   // Must be initialised and idle.
   if (!initialised_ || state_ != davis6410state::idle) return false;
 
@@ -75,10 +65,9 @@ bool davis6410::start_sample(windsamplefn fn, void* context) {
   return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
 // Abort the current sample if there is one in progress.
-// --------------------------------------------------------------------------------------------------------------------
-void davis6410::abort_sample() {
+void davis6410::abort_sample()
+{
   // Must be initialised.
   if (!initialised_) return;
 
@@ -97,10 +86,8 @@ void davis6410::abort_sample() {
   }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Service the interface.
-// --------------------------------------------------------------------------------------------------------------------
-void davis6410::service() {
+void davis6410::service()
+{
   switch (state_) {
     case davis6410state::idle: {
       break;
@@ -108,9 +95,7 @@ void davis6410::service() {
 
     case davis6410state::new_sample: {
       // Start a new sample off.
-      wind_speed_pulse_counter = 0;
-      sample_start_time_ = millis();
-
+      wind_pulse_counter_->clear();
       state_ = davis6410state::sampling_speed;
 
       break;
@@ -118,8 +103,8 @@ void davis6410::service() {
 
     case davis6410state::sampling_speed: {
       // Check if the sample frame has finished.
-      if (millis() - sample_start_time_ >= sample_period_) {
-        sample_pulse_count_ = wind_speed_pulse_counter;
+      if (wind_pulse_counter_->finished()) {
+        sample_pulse_count_ = wind_pulse_counter_->value();
 
         // Sample the wind direction.
         state_ = davis6410state::sampling_direction;
@@ -149,32 +134,8 @@ void davis6410::service() {
   }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Return the last sampled wind speed.
-// The calcualtion from pulse count to mph uses the formula V=P(2.25/T). If we
-// find that it is not accurate enough we could use calibration tables etc for
-// greateer accuracy.
-// --------------------------------------------------------------------------------------------------------------------
-float davis6410::get_wind_mph() const {
-  return sample_pulse_count_ * 2.25f * 1000.f /
-         static_cast<float>(sample_period_);
-}
+float davis6410::get_wind_mph() const { return sample_pulse_count_ * 2.25f * 1000.f / static_cast<float>(sample_period_); }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Return the last sampled wind direction.
-// The calcualtio from pulse count to mph uses the formula V=P(2.25/T). If we
-// find that it is not accurate enough we could use calibration tables etc for
-// greateer accuracy.
-// --------------------------------------------------------------------------------------------------------------------
-int davis6410::get_wind_direction() const {
-  return (sample_direction_ + 31) >> 6;
-}
+int davis6410::get_wind_direction() const { return (sample_direction_ + 31) >> 6; }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Return the last sampled anenometer pulse count.
-// Each pulse is one revolution of the wind cups.
-// --------------------------------------------------------------------------------------------------------------------
-uint8_t davis6410::get_pulses() const {
-  return sample_pulse_count_;
-}
-
+uint8_t davis6410::get_pulses() const { return sample_pulse_count_; }

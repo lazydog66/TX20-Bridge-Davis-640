@@ -11,6 +11,9 @@
 
 #include "windmeterintf.h"
 
+// This is the number of samples to take when calcualting the wind direction.
+constexpr uint8_t k_wind_direction_average_n = 10;
+
 // This is the default duration over which the wind speed is calculated.
 // The anenometer's spec says the minimum wind speed is 1 mph which is 1
 // revolution per 2.25 seconds, so 2.25 seconds seems like a reasonable amount
@@ -24,6 +27,21 @@ constexpr unsigned long k_wind_speed_sample_t = 2250;
 // period), hece something in the range 1 to 20 ms will do.
 constexpr unsigned long k_wind_pulse_debounce = 18;
 
+// This is the minimum width, in millieconds, of a pulse on the wind speed sensor line.
+constexpr uint8_t k_wind_pulse_width = 3;
+
+// This is the threshold value for a logic low on the wind speed sensor line.
+constexpr uint8_t k_wind_pulse_low_level = 10;
+
+// This is the threshold for detecting noisy pulses.
+// A value of 0 will only detect pulses with no noise, wheras a value 0f 0.1 will allow
+// up to 10% of the samples to be noise.
+constexpr float k_wind_pulse_noise_factor = 0.03f;
+
+// The wind speed signal can be sampled by either the falling edge task or the adc task.
+// This enum is used to describe which method should be used.
+enum class davis6410method { adc, falling_edge };
+
 // The state for the 6410.
 //    idle - the 6410 is doing nothing
 //    new_sample - a new sample has been requested
@@ -36,15 +54,16 @@ enum class davis6410state {
   send_frame,
 };
 
-class davis6410 : public windmeterintf {
+class davis6410 : public windmeterintf
+{
  public:
   // The Davis runs off two pins, a digital input for the wind speed pulses and
   // an analogue pin for the wind direction. The anenometer's spec says the
   // minimum wind speed is 1 mph which is 1 revolution per 2.25 seconds, so
   // 2.25 seconds for the period has the advantage that the returned pulse count
-  // is the wind speed in mph.
-  davis6410(int wind_sensor_pin, int wind_direction_pin,
-            unsigned long sample_period = 2250);
+  // is the wind speed in mph. The wind speed can be sampled either using
+  // falling edge interrupts or with the adc.
+  davis6410(davis6410method method, int wind_sensor_pin, int wind_direction_pin, unsigned long sample_period = 2250);
 
   // Initialise the hardware resources and set up the isr.
   // This must be done once before the 6410 can be used.
@@ -62,6 +81,8 @@ class davis6410 : public windmeterintf {
   void abort_sample() override;
 
   // Return the last sampled wind speed.
+  // The calcualtion from pulse count to mph uses the formula V=P(2.25/T).
+  // If it's found that it is not accurate enough then calibration tables could be used.
   float get_wind_mph() const override;
 
   // Return the last sampled wind direction.
@@ -94,9 +115,6 @@ class davis6410 : public windmeterintf {
   // The state of the interface.
   davis6410state state_ = davis6410state::idle;
 
-  // This is the start time in milliseconds of the current sample frame.
-  unsigned long sample_start_time_;
-
   // This is the pulse count for the last sample frame.
   uint8_t sample_pulse_count_;
 
@@ -108,4 +126,15 @@ class davis6410 : public windmeterintf {
 
   // A context that is passed to the callback function.
   void* context_ = nullptr;
+
+  // The task for acquiring the wind direction.
+  class task* wind_direction_task_ = nullptr;
+
+  // The task for sampling the wind speed.
+  // The task can be either a falling edge task or adc task.
+  class task* wind_speed_task_ = nullptr;
+
+  // This filter counts wind pulses as they arrive either from
+  // a falling edge task or an adc task.
+  class samplecounter* wind_pulse_counter_ = nullptr;
 };

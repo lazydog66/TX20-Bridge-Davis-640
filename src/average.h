@@ -2,32 +2,34 @@
 
 #include <Arduino.h>
 
-#include "adctask.h"
+#include "filter.h"
 
 //
 // This adc task takes the average of n samples.
 //
-class adctaskaverage : public adctask
+class average : public filter
 {
 
 public:
-  adctaskaverage(uint8_t adc_pin);
 
-  // Start a new convertion.
+  average(uint8_t n = 1);
+
+  // Clear the filter read for a new sample set.
   // n is the number of samples to average over.
-  void start(uint8_t n = 1);
+  void clear();
 
-  // Return true if the caverage has been taken.
+  // Return true if the average has been taken.
   bool finished() const { return finished_; }
 
   // Return the sample average.
   // Shuld only be called when finished.
-  uint8_t average() const;
+  uint8_t value() const;
 
-private:
   // Accept and proces a new sample.
   // Called from the background adc isr.
-  void service(uint8_t sample) override;
+  void process_sample(uint8_t sample) override;
+
+private:
 
   // The number of samples to average.
   uint8_t n_ = 1;
@@ -37,11 +39,6 @@ private:
 
   // The running sample sum.
   volatile uint16_t sum_ = 0;
-
-  // Ignore the first few samples.
-  // This is because when starting a new average, the next sample may not
-  // be accurate for various reasons, eg channel changed.
-  volatile uint8_t ignore_ = 0;
 
   // Will be true when the task is finished.
   volatile bool finished_ = false;

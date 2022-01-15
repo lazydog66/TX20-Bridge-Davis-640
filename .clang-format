@@ -1,0 +1,19 @@
+---
+BasedOnStyle: Google
+AllowShortBlocksOnASingleLine: 'true'
+AllowShortCaseLabelsOnASingleLine: 'true'
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: 'true'
+AllowShortLoopsOnASingleLine: 'true'
+BreakBeforeBraces: Linux
+BreakConstructorInitializers: BeforeColon
+ColumnLimit: '150'
+IndentCaseLabels: 'true'
+IndentWidth: '2'
+KeepEmptyLinesAtTheStartOfBlocks: 'true'
+MaxEmptyLinesToKeep: '1'
+SortIncludes: 'false'
+TabWidth: '2'
+UseTab: Never
+
+...

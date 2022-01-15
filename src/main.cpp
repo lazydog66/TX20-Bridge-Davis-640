@@ -4,7 +4,7 @@
 #include "davis6410.h"
 #include "tx20emulator.h"
 #include "led.h"
-#include "adctaskaverage.h"
+#include "adctask.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ constexpr int k_txd_pin = 4;
 // Create the interface for reading the 6410.
 // We'll use the default sampling period which is 2250 milliseconds. This is a convenient
 // duration because it means that the wind speed in mph is simply the number of pulses in the sample.
-davis6410 wind_meter(k_wind_sensor_pin, k_wind_direction_pin);
+davis6410 wind_meter(davis6410method::falling_edge, k_wind_sensor_pin, k_wind_direction_pin);
 
 // Create the tx20 emulator for sending tx20 formatted wind data.
 tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
@@ -43,59 +43,63 @@ tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
 // Create the controller for the front panel led.
 led panel_led(k_front_panel_ped_pin);
 
-// Test for the adc average filter.
-adctaskaverage adc_average(k_wind_direction_pin);
-
+//
 // ------------------------------------------------------------------------------------------------
 // This is the event handler for the tx20 emulator events.
 // What we do is flash the led when a wind sample has been taken and the data
 // is being sent out on the Txd line.
 // ------------------------------------------------------------------------------------------------
-void tx20_event_handler(tx20event event) {
+void tx20_event_handler(tx20event event)
+{
 
-  switch (event) {
+  switch (event)
+  {
 
-    case tx20event::start_data_frame: {
-        // Flash the led when data is being sent out on Txd.
-        panel_led.flash(k_led_sample_flash_ms);
-        break;
-      }
+  case tx20event::start_data_frame:
+  {
+    // Flash the led when data is being sent out on Txd.
+    panel_led.flash(k_led_sample_flash_ms);
+    break;
+  }
 
-    case tx20event::end_sample: {
-        // At this point, the wind has been sampled and the data sent on Txd.
-        // As an example, the wind sample is logged to the console.
-        uint8_t pulses = wind_meter.get_pulses();
-        float mph = wind_meter.get_wind_mph();
-        int direction = wind_meter.get_wind_direction();
+  case tx20event::end_sample:
+  {
+    // At this point, the wind has been sampled and the data sent on Txd.
+    // As an example, the wind sample is logged to the console.
+    uint8_t pulses = wind_meter.get_pulses();
+    float mph = wind_meter.get_wind_mph();
+    int direction = wind_meter.get_wind_direction();
 
-        Serial.print(String(F("pulses=")) + String(pulses));
-        Serial.print(String(F(", mph=")) + String(mph));
-        Serial.println(String(F(", direction=")) + String(direction));
+    Serial.print(String(F("pulses=")) + String(pulses));
+    Serial.print(String(F(", mph=")) + String(mph));
+    Serial.println(String(F(", direction=")) + String(direction));
 
-        break;
-      }
+    break;
+  }
 
-    // Don't bother do anything for these events.
-    case tx20event::start_sample:
-    case tx20event::end_data_frame:
-    case tx20event::abort_sample: {
-      break;
-    }
+  // Don't bother do anything for these events.
+  case tx20event::start_sample:
+  case tx20event::end_data_frame:
+  case tx20event::abort_sample:
+  {
+    break;
+  }
   }
 }
 
 // ------------------------------------------------------------------------------------------------
 // Set up initaialse the 6410 interface and tx20 emulator.
 // ------------------------------------------------------------------------------------------------
-void setup() {
+void setup()
+{
 
   Serial.begin(115200);
 
   Serial.println(F(""));
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
   Serial.println(F(""));
-  Serial.println(String(F("speed sample T is ")) + String(k_wind_speed_sample_t)+ F(" ms"));
-  Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce)+ F(" ms"));
+  Serial.println(String(F("speed sample T is ")) + String(k_wind_speed_sample_t) + F(" ms"));
+  Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce) + F(" ms"));
   Serial.println(F(""));
 
   // panel_led.on();
@@ -107,32 +111,17 @@ void setup() {
   tx20_emulator.initialise(&wind_meter, tx20_event_handler);
 
   // Initialise the adc tasks and start the first sample off.
-  init_adc_tasks();
-  adc_average.start(255);
+ // init_adc_tasks();
 }
 
 // ------------------------------------------------------------------------------------------------
 // The main loop simply services the  6410 interface, the tx20 emulator and the led.
 // These need to be done periodically and as often as possible.
 // ------------------------------------------------------------------------------------------------
-void loop() {
+void loop()
+{
   // Service the 6410 interface and tx20 emulator.
   wind_meter.service();
   tx20_emulator.service();
   panel_led.service();
-
-static uint32_t count = 0;
-
-  if (adc_average.finished()) {
-
-    uint8_t sample = adc_average.average();
-    Serial.print(count);
-    Serial.print(". average = ");
-    Serial.println(sample);
-
-    // Start another sample off
-    adc_average.start(239);
-
-    ++count;
-  }
 }

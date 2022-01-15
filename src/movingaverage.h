@@ -2,11 +2,13 @@
 
 #include <Arduino.h>
 
-
 // This is the maximum width for the moving average class.
 constexpr uint8_t k_moving_average_max_width = 255;
 
-class movingaverage {
+class movingaverage
+{
+
+public:
   // Construct a moving average filter with a defined width (measured in samples).
   movingaverage(uint8_t width);
 
@@ -20,7 +22,7 @@ class movingaverage {
   // Push a new sample into the moving average.
   void push(uint8_t value);
 
- private:
+private:
   // Width of the filter, in samples.
   uint8_t width_;
 
