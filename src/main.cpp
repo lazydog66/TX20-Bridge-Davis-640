@@ -5,6 +5,7 @@
 #include "tx20emulator.h"
 #include "led.h"
 #include "adctask.h"
+#include "pulsegenerator.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -17,7 +18,7 @@ constexpr int k_front_panel_ped_pin = 9;
 constexpr uint16_t k_led_sample_flash_ms = 333;
 
 // The Davis 6410 interface uses two pins.
-// The wind sensor pin is used to count pulses from the anenometer using interrupts. We muse us
+// The wind sensor pin is used to count pulses from the anenometer using interrupts. We must use
 // a pin that supports interrupts. The wind direction is measured by sampling the wind vane
 // potentiometer in the 6410. An analoue pin is used to do this.
 constexpr int k_wind_sensor_pin = 2;
@@ -42,6 +43,10 @@ tx20emulator tx20_emulator(k_dtr_pin, k_txd_pin);
 
 // Create the controller for the front panel led.
 led panel_led(k_front_panel_ped_pin);
+
+
+// The pulse generator is used for testing the davis640 and supposting classes.
+pulsegenerator pulse_generator(100, 5, LED_BUILTIN);
 
 //
 // ------------------------------------------------------------------------------------------------
@@ -124,4 +129,6 @@ void loop()
   wind_meter.service();
   tx20_emulator.service();
   panel_led.service();
+
+  pulse_generator.service();
 }
