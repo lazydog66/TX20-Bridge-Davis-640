@@ -29,7 +29,7 @@ class samplecounter : public filter
   unsigned long period_ = 0;
 
   // The counter for the number of samples that have arrived.
-  uint8_t count_ = 0;
+  volatile uint8_t count_ = 0;
 
   // This wil lbe set to true when the counting period has ended.
   mutable bool finished_ = true;

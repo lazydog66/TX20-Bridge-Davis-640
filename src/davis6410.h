@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "adctask.h"
 #include "windmeterintf.h"
 
 // This is the number of samples to take when calcualting the wind direction.
@@ -25,10 +26,10 @@ constexpr unsigned long k_wind_speed_sample_t = 2250;
 // Information on the web suggests that the debounce period for a reed switch
 // is around 1 ms. At 200 mph we have 1 pulse per 11.26 ms (for a 2.25 second sample
 // period), hece something in the range 1 to 20 ms will do.
-constexpr unsigned long k_wind_pulse_debounce = 18;
+constexpr unsigned long k_wind_pulse_debounce = 8;
 
 // This is the minimum width, in millieconds, of a pulse on the wind speed sensor line.
-constexpr uint8_t k_wind_pulse_width = 3;
+constexpr uint8_t k_wind_pulse_width = 4; // 3 * k_adc_sample_rate / 1000;
 
 // This is the threshold value for a logic low on the wind speed sensor line.
 constexpr uint8_t k_wind_pulse_low_level = 10;
@@ -133,6 +134,9 @@ class davis6410 : public windmeterintf
   // The task for sampling the wind speed.
   // The task can be either a falling edge task or adc task.
   class task* wind_speed_task_ = nullptr;
+
+  // THis calculates teh average wind direction.
+  class average* wind_direction_average_ = nullptr;
 
   // This filter counts wind pulses as they arrive either from
   // a falling edge task or an adc task.

@@ -22,7 +22,8 @@ davis6410::davis6410(davis6410method method, int wind_speed_pin, int wind_vane_p
 {
   // Create the task for reading the wind direction.
   // The wind direction is read by reading the analog value on the wind vane pin.
-  wind_direction_task_ = new adctask(new average(k_wind_direction_average_n), wind_vane_pin);
+  wind_direction_average_ = new average(k_wind_direction_average_n);
+  wind_direction_task_ = new adctask(wind_direction_average_, wind_vane_pin);
 
   // The pulses on the wind speed line are counted as they arrive.
   // The pulse rate defines the measured wind speed.
@@ -33,8 +34,13 @@ davis6410::davis6410(davis6410method method, int wind_speed_pin, int wind_vane_p
   switch (method) {
     // The adc method requires an adc task and the pulsar filter.
     case davis6410method::adc: {
-      filter *sample_filter = new pulsar(k_wind_pulse_width, k_wind_pulse_debounce, k_wind_pulse_low_level, k_wind_pulse_noise_factor, []() {});
+
+      filter *sample_filter = new pulsar(k_wind_pulse_width, k_wind_pulse_debounce, k_wind_pulse_low_level);
+      sample_filter->set_forward_filter(wind_pulse_counter_);
+
       wind_speed_task_ = new adctask(sample_filter, wind_speed_pin);
+      wind_speed_task_->start();
+
       break;
     }
 
@@ -57,6 +63,8 @@ bool davis6410::start_sample(windsamplefn fn, void *context)
 {
   // Must be initialised and idle.
   if (!initialised_ || state_ != davis6410state::idle) return false;
+
+  //  Serial.println("> start sample");
 
   sample_fn_ = fn;
   context_ = context;
@@ -96,7 +104,9 @@ void davis6410::service()
 
     case davis6410state::new_sample: {
       // Start a new sample off.
+      Serial.println("begin speed");
       wind_pulse_counter_->clear();
+      wind_speed_task_->start();
       state_ = davis6410state::sampling_speed;
 
       break;
@@ -105,7 +115,9 @@ void davis6410::service()
     case davis6410state::sampling_speed: {
       // Check if the sample frame has finished.
       if (wind_pulse_counter_->finished()) {
+        wind_speed_task_->stop();
         sample_pulse_count_ = wind_pulse_counter_->value();
+        Serial.println("end speed");
 
         // Sample the wind direction.
         state_ = davis6410state::sampling_direction;
@@ -116,9 +128,18 @@ void davis6410::service()
 
     case davis6410state::sampling_direction: {
       // Read the wind direction directly.
-      sample_direction_ = analogRead(wind_vane_pin_);
+      Serial.println("begin drn");
+      wind_direction_task_->start();
+
+      while (!wind_direction_average_->finished())
+        ;
+
+    wind_direction_task_->stop();
+      sample_direction_ = wind_direction_average_->value();
 
       state_ = davis6410state::send_frame;
+
+      Serial.println("end drn " + String(sample_direction_));
 
       break;
     }

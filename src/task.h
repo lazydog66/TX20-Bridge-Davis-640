@@ -17,6 +17,9 @@ class task
 {
 
  public:
+
+ task() = default;
+ 
   // Deleting the task will also delete the attached filter.
   ~task();
 
@@ -34,8 +37,15 @@ class task
   void set_filter(class filter* sample_filter);
 
  protected:
+
+  task(filter* sample_filter);
+
   // The sample filter associated with the task.
   filter* filter_ = nullptr;
+
+  // This will be true if the task has been started and running.
+  // Derived classes should extend this method to start up whatever resources they need.
+  bool started_ = false;
 
  private:
   // Start the low level task.
@@ -47,7 +57,4 @@ class task
   // Derived classes need to implement stop_task().
   virtual void stop_task() = 0;
 
-  // This will be true if the task has been started.
-  // Derived classes should extend this method to start up whatever resources they need.
-  bool started_ = false;
 };

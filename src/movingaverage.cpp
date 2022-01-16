@@ -12,8 +12,6 @@ void movingaverage::clear() {
   for (uint16_t i = 0; i < width_; ++i) samples_[i] = 0;
 }
 
-uint8_t movingaverage::average() const { return sum_ / width_; }
-
 void movingaverage::push(uint8_t value) {
   // Pop the oldest value and adjust the sum.
   sum_ -= samples_[index_];

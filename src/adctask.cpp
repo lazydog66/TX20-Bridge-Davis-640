@@ -1,3 +1,6 @@
+
+#include <Arduino.h>
+
 #include "adctask.h"
 #include "filter.h"
 
@@ -59,17 +62,28 @@ static uint8_t analog_read() { return ADCH; }
 //
 ISR(TIMER1_COMPA_vect)
 {
+  static uint16_t t = 0;
+
+  ++t;
+  if ((t % (1024 * 8)) != 0) return;
+
   // Nothing to do if the adc hasn't finished.
   // In theory, the adc convertion should always be ready, except perhaps for
   // the first adc after the adc channel has been changed. Strictly speaking, the first
   // sample may not be entirely accurate then.
-  if (!analog_ready()) return;
+  if (!analog_ready()) {
+    Serial.println("*");
+    return;
+  }
 
   // Get the sample.
   uint8_t sample = analog_read();
+  Serial.println(sample);
 
   // Change the channel if need be, and then start the next adc convertion going.
   if (next_adc_pin != current_adc_pin) {
+    Serial.println(String("change ") + String(next_adc_pin));
+
     // Set up the adc for the selected channel and left align the result.
     // Left aligning allows the 8 bit value to be read straight from ADCH.
     // Setting bit 6 selects AVCC as the voltage reference.
@@ -160,7 +174,17 @@ static void init_adc_clock_prescaler(uint8_t value)
 // The adc is driven directly by timer 1 interrupts.
 //
 static void initialise_timer_and_adc()
+
 {
+  // Repeare the analog inputs.
+  analogRead(A0);
+  analogRead(A1);
+  analogRead(A2);
+  analogRead(A3);
+  analogRead(A5);
+  analogRead(A6);
+  analogRead(A7);
+
   TCCR1A = 0;
   TCCR1B = 0;
   TCNT1 = 0;
@@ -193,9 +217,6 @@ static void init_adc_tasks()
   // Set timer 1 going and set teh adc pre scaler etc.
   initialise_timer_and_adc();
 
-  // Start the adc off in the background.
-  analog_trigger();
-
   adc_tasks_initialised = true;
 }
 
@@ -210,7 +231,8 @@ adctask::~adctask()
 
 void adctask::start_task()
 {
-  cli();
+  // Stop the current task if there is one.
+  if (current_adc_task) current_adc_task->stop_task();
 
   // Make sure the background adc task has been initialised.
   init_adc_tasks();
@@ -222,21 +244,17 @@ void adctask::start_task()
   ignore_count_ = k_adc_ignore_count;
 
   // Make this the current task.
-  if (current_adc_task != this) current_adc_task = this;
+  current_adc_task = this;
 
-  // Start the sample convertions.
+  // Start the first conversion off.
   analog_trigger();
-
-  sei();
 }
 
 void adctask::stop_task()
 {
-  if (current_adc_task == this) {
-    cli();
-    current_adc_task = nullptr;
-    sei();
-  }
+  if (current_adc_task == this) current_adc_task = nullptr;
+
+  started_ = false;
 }
 
 void adctask::service(uint8_t sample)

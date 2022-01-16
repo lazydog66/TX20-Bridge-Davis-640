@@ -17,12 +17,13 @@ constexpr int k_front_panel_ped_pin = 9;
 // The front panel led is flashed for this number of milliseconds when a sample has been taken.
 constexpr uint16_t k_led_sample_flash_ms = 333;
 
-// The Davis 6410 interface uses two pins.
-// The wind sensor pin is used to count pulses from the anenometer using interrupts. We must use
-// a pin that supports interrupts. The wind direction is measured by sampling the wind vane
-// potentiometer in the 6410. An analoue pin is used to do this.
-constexpr int k_wind_sensor_pin = 2;
-constexpr int k_wind_direction_pin = A0;
+// The wind sensor pin for the Davis 6410 has to be either an interrupt pin or an
+// analog pin, depending on the detection method used.
+constexpr int k_wind_sensor_pin_adc = 2;
+constexpr int k_wind_sensor_pin_falling_edge = 2;
+
+// The wind direction is measured by sampling the wind vane potentiometer in the 6410.
+constexpr int k_wind_direction_pin = 0;
 
 // The TX20  emulator uses two digital pins for Dtr and Txd which are defined here.
 // Dtr is an input and controls whether the TX20 should sample and send wind data.
@@ -44,7 +45,6 @@ tx20emulator* tx20_emulator;
 // Create the controller for the front panel led.
 led panel_led(k_front_panel_ped_pin);
 
-
 // The pulse generator is used for testing the davis640 and supposting classes.
 pulsegenerator pulse_generator(100, 5, LED_BUILTIN);
 
@@ -57,38 +57,34 @@ pulsegenerator pulse_generator(100, 5, LED_BUILTIN);
 void tx20_event_handler(tx20event event)
 {
 
-  switch (event)
-  {
+  switch (event) {
 
-  case tx20event::start_data_frame:
-  {
-    // Flash the led when data is being sent out on Txd.
-    panel_led.flash(k_led_sample_flash_ms);
-    break;
-  }
+    case tx20event::start_data_frame: {
+      // Flash the led when data is being sent out on Txd.
+      panel_led.flash(k_led_sample_flash_ms);
+      break;
+    }
 
-  case tx20event::end_sample:
-  {
-    // At this point, the wind has been sampled and the data sent on Txd.
-    // As an example, the wind sample is logged to the console.
-    uint8_t pulses = wind_meter->get_pulses();
-    float mph = wind_meter->get_wind_mph();
-    int direction = wind_meter->get_wind_direction();
+    case tx20event::end_sample: {
+      // At this point, the wind has been sampled and the data sent on Txd.
+      // As an example, the wind sample is logged to the console.
+      uint8_t pulses = wind_meter->get_pulses();
+      float mph = wind_meter->get_wind_mph();
+      int direction = wind_meter->get_wind_direction();
 
-    Serial.print(String(F("pulses=")) + String(pulses));
-    Serial.print(String(F(", mph=")) + String(mph));
-    Serial.println(String(F(", direction=")) + String(direction));
+      Serial.print(String(F("pulses=")) + String(pulses));
+      Serial.print(String(F(", mph=")) + String(mph));
+      Serial.println(String(F(", direction=")) + String(direction));
 
-    break;
-  }
+      break;
+    }
 
-  // Don't bother do anything for these events.
-  case tx20event::start_sample:
-  case tx20event::end_data_frame:
-  case tx20event::abort_sample:
-  {
-    break;
-  }
+    // Don't bother do anything for these events.
+    case tx20event::start_sample:
+    case tx20event::end_data_frame:
+    case tx20event::abort_sample: {
+      break;
+    }
   }
 }
 
@@ -100,7 +96,7 @@ void setup()
 
   Serial.begin(115200);
 
-delay(500);
+  delay(500);
 
   Serial.println(F(""));
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
@@ -109,10 +105,12 @@ delay(500);
   Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce) + F(" ms"));
   Serial.println(F(""));
 
- wind_meter = new davis6410(davis6410method::falling_edge, k_wind_sensor_pin, k_wind_direction_pin);
+  // Creat the interface to the Davis 6410.
+  // The interface can use either the falling edge interrupts on pin 2 or 3, or the adc.
+  wind_meter = new davis6410(davis6410method::adc, k_wind_sensor_pin_adc, k_wind_direction_pin);
 
-// Create the tx20 emulator for sending tx20 formatted wind data.
- tx20_emulator = new tx20emulator(k_dtr_pin, k_txd_pin);
+  // Create the tx20 emulator for sending tx20 formatted wind data.
+  tx20_emulator = new tx20emulator(k_dtr_pin, k_txd_pin);
 
   // panel_led.on();
   // delay(3000);
@@ -123,7 +121,7 @@ delay(500);
   tx20_emulator->initialise(wind_meter, tx20_event_handler);
 
   // Initialise the adc tasks and start the first sample off.
- // init_adc_tasks();
+  // init_adc_tasks();
 }
 
 // ------------------------------------------------------------------------------------------------

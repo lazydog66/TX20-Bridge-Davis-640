@@ -5,7 +5,7 @@
 #include "task.h"
 
 // This is the maximum sampling rate.
-constexpr uint32_t k_max_sample_rate = 31250;
+constexpr uint32_t k_adc_sample_rate = 31250;
 
 // void init_adc_tasks();
 
@@ -47,7 +47,7 @@ class adctask : public task
 
   // Return the sampling frequency used for the current sample set.
   // At the moment, the sampling rate is fixed.
-  uint32_t sample_rate() const { return k_max_sample_rate; }
+  uint32_t sample_rate() const { return k_adc_sample_rate; }
 
   // Start a new sample set.
   // Pass the adc channel for the convertions.

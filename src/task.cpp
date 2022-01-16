@@ -3,6 +3,10 @@
 
 #include "task.h"
 
+task::task(filter* sample_filter)
+: filter_{sample_filter}
+{}
+
 task::~task()
 {
   if (filter_) delete filter_;
@@ -11,16 +15,18 @@ task::~task()
 void task::start()
 {
   if (!started_) {
+    cli();
     start_task();
-    started_ = true;
+    sei();
   }
 }
 
 void task::stop()
 {
   if (started_) {
+    cli();
     stop_task();
-    started_ = false;
+    sei();
   }
 }
 
