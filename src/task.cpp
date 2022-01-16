@@ -26,6 +26,7 @@ void task::stop()
 
 void task::service(uint8_t sample_value)
 {
+  Serial.write('.');
   if (filter_) filter_->process_sample(sample_value);
 }
 

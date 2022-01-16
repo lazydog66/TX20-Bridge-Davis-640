@@ -23,6 +23,9 @@ static bool initialised = false;
 // The isr for servicing falling edge interrupts.
 static void isr_6410()
 {
+  // ban
+  Serial.write('.');
+  
   if (current_task) current_task->service(0);
 }
 
@@ -30,6 +33,9 @@ static void isr_6410()
 // It's up to the caller to ensure the pin is valid.
 static void initialise(uint8_t pin)
 {
+  // ban
+  Serial.println("initialise isr");
+
   // Initialise the falling edge interrupts if need be.
   if (!initialised) {
 

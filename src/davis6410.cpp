@@ -41,6 +41,7 @@ davis6410::davis6410(davis6410method method, int wind_speed_pin, int wind_vane_p
     // The falling edge method requires a falling edge task and sample counter.
     case davis6410method::falling_edge: {
       wind_speed_task_ = new fallingedgetask(wind_pulse_counter_, wind_speed_pin);
+      wind_speed_task_->start();
       break;
     }
   }
