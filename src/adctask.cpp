@@ -10,12 +10,12 @@
 // Timer 1 is set to run slower than the adc. In this way, the sample
 // rate is determined by the running rate of timer 1. The adc runs at ~ 38 KHz.
 // A prescaler of 64 and ctc value of 7 gives a timer frequency of,
-//    16000000 / (64 * 8) = 31250 Hz
+//    16000000 / (64 * 8) =  31250 Hz
 // This is slower than the adc, so should be okay.
 constexpr int k_timer_1_comapre_to = 7;
 
 // This is the frequency that timer 1 is set to run at.
-constexpr uint32_t k_timer_1_frequency = 31250;
+constexpr uint32_t k_timer_1_frequency = 16000000 / (64 * (k_timer_1_comapre_to + 1));
 
 // This value drives the adc at ~ 38.5 KHz, which is faster than timer1.
 constexpr uint8_t k_adc_prescaler = 32;

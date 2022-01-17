@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // This is the maximum width for the moving average class.
-constexpr uint8_t k_moving_average_max_width = 128;
+constexpr uint8_t k_moving_average_max_width = 255;
 
 class movingaverage
 {
@@ -14,10 +14,6 @@ public:
 
   // Clear the moving average ready for another sample set.
   void clear();
-
-  // Return the current value of the moving average.
-  // Note, the moving average isn't valid until 'width' samples have been taken
- // uint8_t average() const;
 
   // Return the moving average sum.
   // Use this rather than the average because it avoids the division.

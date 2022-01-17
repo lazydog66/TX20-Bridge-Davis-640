@@ -77,7 +77,7 @@ void davis6410::service()
 
     case davis6410state::new_sample: {
       // Start a new sample off.
-      Serial.println("begin speed");
+     // Serial.println("begin speed");
       wind_speed_task_->start();
       state_ = davis6410state::sampling_speed;
 
@@ -88,7 +88,7 @@ void davis6410::service()
       // Check if the sample frame has finished.
       if (wind_speed_task_->finished()) {
         sample_pulse_count_ = wind_speed_task_->value();
-        Serial.println("end speed");
+        Serial.println("end speed sum " + String(wind_speed_task_->sum()));
 
         // Sample the wind direction.
         state_ = davis6410state::sampling_direction;
@@ -99,7 +99,7 @@ void davis6410::service()
 
     case davis6410state::sampling_direction: {
       // Read the wind direction directly.
-      Serial.println("begin drn");
+   //   Serial.println("begin drn");
       wind_direction_task_->start();
 
       while (!wind_direction_task_->finished())
@@ -109,7 +109,7 @@ void davis6410::service()
 
       state_ = davis6410state::send_frame;
 
-      Serial.println("end drn " + String(sample_direction_));
+   //   Serial.println("end drn " + String(sample_direction_));
 
       break;
     }

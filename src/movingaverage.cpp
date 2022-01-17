@@ -14,12 +14,9 @@ void movingaverage::clear() {
 
 void movingaverage::push(uint8_t value) {
   // Pop the oldest value and adjust the sum.
-  sum_ -= samples_[index_];
+  sum_ = sum_ - samples_[index_] + value;
 
   // Push the new value.
   samples_[index_] = value;
   index_ = (index_ + 1) % width_;
-
-  // Adjust the sum.
-  sum_ += value;
 }

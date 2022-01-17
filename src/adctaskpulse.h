@@ -19,6 +19,7 @@ class adctaskpulse : public adctask
   // Return the sample average.
   // Should only be called when finished.
   uint8_t value() const { return pulse_count_; }
+  uint8_t sum() const {return moving_average_.sum();}
 
   // Accept and proces a new sample.
   // Called from the background adc isr.

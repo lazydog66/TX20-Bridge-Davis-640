@@ -22,14 +22,15 @@ constexpr uint8_t k_wind_direction_average_n = 10;
 // integer number of 1 mph.
 constexpr unsigned long k_wind_speed_sample_t = 2250;
 
-// Debounce period for the wind speed pulses.
+// This is the minimum width, in samples, of a pulse on the wind speed sensor line.
+// It's worked out as the number of samples in 3 ms.
+constexpr uint8_t k_wind_pulse_width = 2.5 * k_adc_sample_rate / 1000;
+
+// Debounce period for the wind speed pulses, in number of samples.
 // Information on the web suggests that the debounce period for a reed switch
 // is around 1 ms. At 200 mph we have 1 pulse per 11.26 ms (for a 2.25 second sample
 // period), hece something in the range 1 to 20 ms will do.
-constexpr unsigned long k_wind_pulse_debounce = 8;
-
-// This is the minimum width, in millieconds, of a pulse on the wind speed sensor line.
-constexpr uint8_t k_wind_pulse_width = 4; // 3 * k_adc_sample_rate / 1000;
+constexpr unsigned long k_wind_pulse_debounce = 10 * k_adc_sample_rate / 1000;
 
 // This is the threshold value for a logic low on the wind speed sensor line.
 constexpr uint8_t k_wind_pulse_low_level = 10;
