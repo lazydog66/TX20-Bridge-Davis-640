@@ -44,7 +44,7 @@ tx20emulator* tx20_emulator;
 led panel_led(k_front_panel_ped_pin);
 
 // The pulse generator is used for testing the davis640 and supposting classes.
-pulsegenerator pulse_generator(100, 5, LED_BUILTIN);
+pulsegenerator pulse_generator(20, 5, LED_BUILTIN);
 
 //
 // ------------------------------------------------------------------------------------------------
