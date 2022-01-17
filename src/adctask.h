@@ -2,8 +2,17 @@
 
 #include <Arduino.h>
 
+
+// Change this to the clock frequency of the Arduino;
+constexpr uint32_t k_arduino_frequency = 16000000;
+
+// This is the frequency that timer 1 is set to run at.
+constexpr uint32_t k_timer_1_frequency = 5000;
+
+// 16000000 / (64 * (k_timer_1_comapre_to + 1));
+
 // This is the maximum sampling rate.
-constexpr uint32_t k_adc_sample_rate = 31250 / 8;
+constexpr uint32_t k_adc_sample_rate = k_timer_1_frequency;
 
 // //
 // // Set the current adc task.

@@ -37,7 +37,7 @@ bool davis6410::start_sample(windsamplefn fn, void *context)
   // Must be initialised and idle.
   if (!initialised_ || state_ != davis6410state::idle) return false;
 
-   Serial.println("\nstart wind sample");
+  Serial.println("\nstart wind sample");
 
   sample_fn_ = fn;
   context_ = context;
@@ -77,7 +77,7 @@ void davis6410::service()
 
     case davis6410state::new_sample: {
       // Start a new sample off.
-     // Serial.println("begin speed");
+      // Serial.println("begin speed");
       wind_speed_task_->start();
       state_ = davis6410state::sampling_speed;
 
@@ -89,7 +89,6 @@ void davis6410::service()
       if (wind_speed_task_->finished()) {
 
         sample_pulse_count_ = wind_speed_task_->value();
-        Serial.println("end speed sum " + String(wind_speed_task_->sum()));
 
         // Sample the wind direction.
         state_ = davis6410state::sampling_direction;
@@ -100,7 +99,7 @@ void davis6410::service()
 
     case davis6410state::sampling_direction: {
       // Read the wind direction directly.
-   //   Serial.println("begin drn");
+      //   Serial.println("begin drn");
       wind_direction_task_->start();
 
       while (!wind_direction_task_->finished())
@@ -110,7 +109,7 @@ void davis6410::service()
 
       state_ = davis6410state::send_frame;
 
-   //   Serial.println("end drn " + String(sample_direction_));
+      //   Serial.println("end drn " + String(sample_direction_));
 
       break;
     }
@@ -129,6 +128,6 @@ void davis6410::service()
 
 float davis6410::get_wind_mph() const { return sample_pulse_count_ * 2.25f * 1000.f / static_cast<float>(sample_period_); }
 
-int davis6410::get_wind_direction() const { return (sample_direction_ + 31) >> 6; }
+int davis6410::get_wind_direction() const { return ((sample_direction_ + 7) >> 4) & 0xf; }
 
 uint8_t davis6410::get_pulses() const { return sample_pulse_count_; }
