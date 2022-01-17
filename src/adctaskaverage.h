@@ -33,7 +33,7 @@ class adctaskaverage : public adctask
   // Should only be called when finished.
   uint8_t value() const { return sum_ / count_; }
 
-  // Accept and proces a new sample.
+  // Accept and process a new sample.
   // Called from the background adc isr.
   void service(uint8_t sample) override
   {

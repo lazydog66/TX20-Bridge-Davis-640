@@ -37,7 +37,7 @@ bool davis6410::start_sample(windsamplefn fn, void *context)
   // Must be initialised and idle.
   if (!initialised_ || state_ != davis6410state::idle) return false;
 
-  Serial.println("\nstart wind sample");
+  // Serial.println("\nstart wind sample");
 
   sample_fn_ = fn;
   context_ = context;

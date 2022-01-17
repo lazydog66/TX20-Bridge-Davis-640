@@ -10,6 +10,14 @@
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
+// Some settings to help debugging.
+// If these are set, then the wind speed and direction an be tested by connecting the built in
+// led pin directly to A2, and a potentiometer can be attached to PD2. The output should then
+// display wind readings.
+constexpr bool k_debug_mode = true;
+constexpr uint8_t k_debug_wind_speed_mph = 10;
+constexpr uint8_t k_debug_pulse_width = 3;
+
 // The pin the front panel led is attached to.
 // The led is flashed to show when a wind sample has been taken.
 constexpr int k_front_panel_ped_pin = 9;
@@ -44,7 +52,7 @@ tx20emulator* tx20_emulator;
 led panel_led(k_front_panel_ped_pin);
 
 // The pulse generator is used for testing the davis640 and supporting classes.
-pulsegenerator pulse_generator(20, 3, LED_BUILTIN);
+pulsegenerator pulse_generator(2250 / k_debug_wind_speed_mph, k_debug_pulse_width, LED_BUILTIN);
 
 //
 // ------------------------------------------------------------------------------------------------
@@ -110,19 +118,15 @@ void setup()
   // Create the tx20 emulator for sending tx20 formatted wind data.
   tx20_emulator = new tx20emulator(k_dtr_pin, k_txd_pin);
 
-  // panel_led.on();
-  // delay(3000);
-  // panel_led.off();
-
   // The 6410 interface  and tx20 emulator must be initialised before use.
   wind_meter->initialise();
   tx20_emulator->initialise(wind_meter, tx20_event_handler);
 
-  pinMode(PD2, OUTPUT);
- digitalWrite(PD2, HIGH);
-
-  // Initialise the adc tasks and start the first sample off.
-  // init_adc_tasks();
+  if (k_debug_mode) {
+    // Output Vcc to PD2 so that a potentiometer can emulate the wind direction.
+    pinMode(PD2, OUTPUT);
+    digitalWrite(PD2, HIGH);
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -134,7 +138,10 @@ void loop()
   // Service the 6410 interface and tx20 emulator.
   wind_meter->service();
   tx20_emulator->service();
+
   panel_led.service();
 
-  pulse_generator.service();
+  // In debug mode, oulses are output on the built in led pin.
+  // The pin can be attached directly to the signal input adc pin to emulate the Davis 6410.
+  if (k_debug_mode) pulse_generator.service();
 }

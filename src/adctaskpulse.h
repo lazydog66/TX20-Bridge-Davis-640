@@ -45,12 +45,13 @@ class adctaskpulse : public adctask
   // This will be set to true when the counting interval is over.
   volatile mutable bool finished_ = true;
 
-  // The pUlse counter.
+  // The pulse counter.
   volatile uint8_t pulse_count_;
 
   // The debounce counter.
   uint8_t debounce_count_ = 0;
 
-  // The start time for the current session..
-  volatile unsigned long start_t_ = 0;
+  // The number of samples to take for the session.
+  // This is decremented on every sample, and when it reaches zero, the task is finished.
+  uint16_t sample_count_ = 0;
 };

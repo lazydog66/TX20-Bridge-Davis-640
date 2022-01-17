@@ -1,4 +1,5 @@
 
+
 #include <Arduino.h>
 
 #include "adctaskpulse.h"
@@ -19,7 +20,7 @@ void adctaskpulse::start()
   moving_average_.clear();
 
   // Start this adc task.
-  start_t_ = millis();
+  sample_count_ = period_ * k_adc_sample_rate / 1000;
   start_task(this, adc_pin_);
 
   sei();
@@ -39,18 +40,12 @@ void adctaskpulse::stop()
 
 bool adctaskpulse::finished() const
 {
-  if (!finished_) finished_ = millis() - start_t_ >= period_;
-
   return finished_;
 }
 
 void adctaskpulse::service(uint8_t sample_value)
 {
   // Nothing to do if finished.
-  if (finished_) return;
-
-  // Check if actually finished.
-  finished_ = millis() - start_t_ >= period_;
   if (finished_) return;
 
   // Not finished yet, so process the sample through the moving average filter.
@@ -70,4 +65,8 @@ void adctaskpulse::service(uint8_t sample_value)
 
     debounce_count_ = debounce_width_;
   }
+
+  // Check if actually finished after this sample.
+  --sample_count_;
+  finished_ = sample_count_ == 0;
 }
