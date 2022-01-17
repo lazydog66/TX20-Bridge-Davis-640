@@ -8,49 +8,22 @@
 #include <math.h>
 
 #include "davis6410.h"
-#include "fallingedgetask.h"
-#include "adctask.h"
-#include "samplecounter.h"
-#include "average.h"
-#include "pulsar.h"
+#include "adctaskpulse.h"
+#include "adctaskaverage.h"
 
 using microseconds_t = unsigned long;
 using milliseconds_t = unsigned long;
 
-davis6410::davis6410(davis6410method method, int wind_speed_pin, int wind_vane_pin, unsigned long sample_period)
+davis6410::davis6410(int wind_speed_pin, int wind_vane_pin, unsigned long sample_period)
     : wind_speed_pin_{wind_speed_pin}, wind_vane_pin_{wind_vane_pin}, sample_period_{sample_period}
 {
   // Create the task for reading the wind direction.
   // The wind direction is read by reading the analog value on the wind vane pin.
-  wind_direction_average_ = new average(k_wind_direction_average_n);
-  wind_direction_task_ = new adctask(wind_direction_average_, wind_vane_pin);
-
-  // The pulses on the wind speed line are counted as they arrive.
-  // The pulse rate defines the measured wind speed.
-  wind_pulse_counter_ = new samplecounter(k_wind_speed_sample_t);
+  wind_direction_task_ = new adctaskaverage(wind_vane_pin, 10);
 
   // Create the task for reading the wind speed.
   // There are two alternative ways of reading the wind speed, adc and falling edge interrupts.
-  switch (method) {
-    // The adc method requires an adc task and the pulsar filter.
-    case davis6410method::adc: {
-
-      filter *sample_filter = new pulsar(k_wind_pulse_width, k_wind_pulse_debounce, k_wind_pulse_low_level);
-      sample_filter->set_forward_filter(wind_pulse_counter_);
-
-      wind_speed_task_ = new adctask(sample_filter, wind_speed_pin);
-      wind_speed_task_->start();
-
-      break;
-    }
-
-    // The falling edge method requires a falling edge task and sample counter.
-    case davis6410method::falling_edge: {
-      wind_speed_task_ = new fallingedgetask(wind_pulse_counter_, wind_speed_pin);
-      wind_speed_task_->start();
-      break;
-    }
-  }
+  wind_speed_task_ = new adctaskpulse(k_wind_speed_sample_t, k_wind_pulse_width, k_wind_pulse_debounce, k_wind_pulse_low_level, wind_speed_pin);
 }
 
 void davis6410::initialise()
@@ -64,7 +37,7 @@ bool davis6410::start_sample(windsamplefn fn, void *context)
   // Must be initialised and idle.
   if (!initialised_ || state_ != davis6410state::idle) return false;
 
-  //  Serial.println("> start sample");
+   Serial.println("\nstart wind sample");
 
   sample_fn_ = fn;
   context_ = context;
@@ -105,7 +78,6 @@ void davis6410::service()
     case davis6410state::new_sample: {
       // Start a new sample off.
       Serial.println("begin speed");
-      wind_pulse_counter_->clear();
       wind_speed_task_->start();
       state_ = davis6410state::sampling_speed;
 
@@ -114,9 +86,8 @@ void davis6410::service()
 
     case davis6410state::sampling_speed: {
       // Check if the sample frame has finished.
-      if (wind_pulse_counter_->finished()) {
-        wind_speed_task_->stop();
-        sample_pulse_count_ = wind_pulse_counter_->value();
+      if (wind_speed_task_->finished()) {
+        sample_pulse_count_ = wind_speed_task_->value();
         Serial.println("end speed");
 
         // Sample the wind direction.
@@ -131,11 +102,10 @@ void davis6410::service()
       Serial.println("begin drn");
       wind_direction_task_->start();
 
-      while (!wind_direction_average_->finished())
+      while (!wind_direction_task_->finished())
         ;
 
-    wind_direction_task_->stop();
-      sample_direction_ = wind_direction_average_->value();
+      sample_direction_ = wind_direction_task_->value();
 
       state_ = davis6410state::send_frame;
 

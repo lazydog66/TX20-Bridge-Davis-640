@@ -17,10 +17,8 @@ constexpr int k_front_panel_ped_pin = 9;
 // The front panel led is flashed for this number of milliseconds when a sample has been taken.
 constexpr uint16_t k_led_sample_flash_ms = 333;
 
-// The wind sensor pin for the Davis 6410 has to be either an interrupt pin or an
-// analog pin, depending on the detection method used.
+// The wind sensor pin for the Davis 6410 has to be one of the adc channels 0 - 7.
 constexpr int k_wind_sensor_pin_adc = 2;
-constexpr int k_wind_sensor_pin_falling_edge = 2;
 
 // The wind direction is measured by sampling the wind vane potentiometer in the 6410.
 constexpr int k_wind_direction_pin = 0;
@@ -107,7 +105,7 @@ void setup()
 
   // Creat the interface to the Davis 6410.
   // The interface can use either the falling edge interrupts on pin 2 or 3, or the adc.
-  wind_meter = new davis6410(davis6410method::adc, k_wind_sensor_pin_adc, k_wind_direction_pin);
+  wind_meter = new davis6410(k_wind_sensor_pin_adc, k_wind_direction_pin);
 
   // Create the tx20 emulator for sending tx20 formatted wind data.
   tx20_emulator = new tx20emulator(k_dtr_pin, k_txd_pin);

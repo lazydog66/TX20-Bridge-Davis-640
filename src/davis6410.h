@@ -41,7 +41,7 @@ constexpr float k_wind_pulse_noise_factor = 0.03f;
 
 // The wind speed signal can be sampled by either the falling edge task or the adc task.
 // This enum is used to describe which method should be used.
-enum class davis6410method { adc, falling_edge };
+//enum class davis6410method { adc, falling_edge };
 
 // The state for the 6410.
 //    idle - the 6410 is doing nothing
@@ -64,7 +64,7 @@ class davis6410 : public windmeterintf
   // 2.25 seconds for the period has the advantage that the returned pulse count
   // is the wind speed in mph. The wind speed can be sampled either using
   // falling edge interrupts or with the adc.
-  davis6410(davis6410method method, int wind_sensor_pin, int wind_direction_pin, unsigned long sample_period = 2250);
+  davis6410(int wind_sensor_pin, int wind_direction_pin, unsigned long sample_period = 2250);
 
   // Initialise the hardware resources and set up the isr.
   // This must be done once before the 6410 can be used.
@@ -129,16 +129,9 @@ class davis6410 : public windmeterintf
   void* context_ = nullptr;
 
   // The task for acquiring the wind direction.
-  class task* wind_direction_task_ = nullptr;
+  class adctaskaverage* wind_direction_task_ = nullptr;
 
   // The task for sampling the wind speed.
   // The task can be either a falling edge task or adc task.
-  class task* wind_speed_task_ = nullptr;
-
-  // THis calculates teh average wind direction.
-  class average* wind_direction_average_ = nullptr;
-
-  // This filter counts wind pulses as they arrive either from
-  // a falling edge task or an adc task.
-  class samplecounter* wind_pulse_counter_ = nullptr;
+  class adctaskpulse* wind_speed_task_ = nullptr;
 };

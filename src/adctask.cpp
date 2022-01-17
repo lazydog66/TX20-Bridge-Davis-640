@@ -25,16 +25,19 @@ constexpr uint8_t k_adc_prescaler = 32;
 constexpr uint8_t k_adc_ignore_count = 4;
 
 // The current adc channel in use.
-static uint8_t current_adc_pin = 255;
+static volatile uint8_t current_adc_pin = 255;
 
 // The adc channel to use for the next convertion.
-static uint8_t next_adc_pin = 0;
+static volatile uint8_t next_adc_pin = 0;
 
 // The currently active adc task.
-static adctask* current_adc_task = nullptr;
+static volatile adctask* current_adc_task = nullptr;
 
 // This will be set to true if the adc tasks have been initialised.
-static bool adc_tasks_initialised = false;
+static volatile bool adc_tasks_initialised = false;
+
+// This is the number of samples to ignore after changing channel.
+static volatile uint8_t ignore_count_ = 0;
 
 //
 // Utility function to start a new adc conversion.
@@ -62,28 +65,23 @@ static uint8_t analog_read() { return ADCH; }
 //
 ISR(TIMER1_COMPA_vect)
 {
-  static uint16_t t = 0;
-
-  ++t;
-  if ((t % (1024 * 8)) != 0) return;
-
   // Nothing to do if the adc hasn't finished.
   // In theory, the adc convertion should always be ready, except perhaps for
   // the first adc after the adc channel has been changed. Strictly speaking, the first
   // sample may not be entirely accurate then.
-  if (!analog_ready()) {
-    Serial.println("*");
+  if (!analog_ready()) return;
+
+  if (ignore_count_) {
+    --ignore_count_;
+    analog_trigger();
     return;
   }
 
   // Get the sample.
   uint8_t sample = analog_read();
-  Serial.println(sample);
 
   // Change the channel if need be, and then start the next adc convertion going.
   if (next_adc_pin != current_adc_pin) {
-    Serial.println(String("change ") + String(next_adc_pin));
-
     // Set up the adc for the selected channel and left align the result.
     // Left aligning allows the 8 bit value to be read straight from ADCH.
     // Setting bit 6 selects AVCC as the voltage reference.
@@ -174,7 +172,6 @@ static void init_adc_clock_prescaler(uint8_t value)
 // The adc is driven directly by timer 1 interrupts.
 //
 static void initialise_timer_and_adc()
-
 {
   // Repeare the analog inputs.
   analogRead(A0);
@@ -220,47 +217,32 @@ static void init_adc_tasks()
   adc_tasks_initialised = true;
 }
 
-adctask::adctask(filter* sample_filter, uint8_t adc_pin) : filter_{sample_filter}, adc_pin_{adc_pin} {}
+adctask::adctask(uint8_t adc_pin) : adc_pin_{adc_pin} {}
 
-adctask::~adctask()
-{
-  stop_task();
+adctask::~adctask() { stop_task(); }
 
-  if (filter_) delete filter_;
-}
-
-void adctask::start_task()
+void adctask::start_task(adctask* adc_task, uint8_t pin)
 {
   // Stop the current task if there is one.
-  if (current_adc_task) current_adc_task->stop_task();
+  if (current_adc_task) current_adc_task = nullptr;
 
   // Make sure the background adc task has been initialised.
   init_adc_tasks();
 
   // Set up which adc channel we're sampling on.
-  next_adc_pin = adc_pin_;
+  next_adc_pin = pin;
 
   // Set the initial number of samples to ignore.
   ignore_count_ = k_adc_ignore_count;
 
   // Make this the current task.
-  current_adc_task = this;
+  current_adc_task = adc_task;
 
   // Start the first conversion off.
   analog_trigger();
 }
 
-void adctask::stop_task()
+void adctask::stop_task(adctask* adc_task)
 {
-  if (current_adc_task == this) current_adc_task = nullptr;
-
-  started_ = false;
-}
-
-void adctask::service(uint8_t sample)
-{
-  if (ignore_count_)
-    --ignore_count_;
-  else if (filter_)
-    filter_->process_sample(sample);
+  if (current_adc_task == adc_task) current_adc_task = nullptr;
 }
