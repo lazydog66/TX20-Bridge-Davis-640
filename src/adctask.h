@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // This is the maximum sampling rate.
-constexpr uint32_t k_adc_sample_rate = 31250;
+constexpr uint32_t k_adc_sample_rate = 31250 / 8;
 
 // //
 // // Set the current adc task.

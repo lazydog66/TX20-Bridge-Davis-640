@@ -12,10 +12,16 @@
 // A prescaler of 64 and ctc value of 7 gives a timer frequency of,
 //    16000000 / (64 * 8) =  31250 Hz
 // This is slower than the adc, so should be okay.
-constexpr int k_timer_1_comapre_to = 7;
+constexpr int k_timer_1_comapre_to = 63;
 
 // This is the frequency that timer 1 is set to run at.
 constexpr uint32_t k_timer_1_frequency = 16000000 / (64 * (k_timer_1_comapre_to + 1));
+
+// 16000000 / (64 * (x + 1)) = 4000
+// 16000000 / 64 = 4000x + 4000
+// x = (16000000/64 - 4000) / 4000
+// x = 4000/64 - 1;
+
 
 // This value drives the adc at ~ 38.5 KHz, which is faster than timer1.
 constexpr uint8_t k_adc_prescaler = 32;
@@ -58,6 +64,7 @@ static bool analog_ready() { return !bit_is_set(ADCSRA, ADSC); }
 //
 static uint8_t analog_read() { return ADCH; }
 
+uint16_t interrupts_count = 0;
 //
 // This is timer 1's service routine.
 //
@@ -65,20 +72,22 @@ static uint8_t analog_read() { return ADCH; }
 //
 ISR(TIMER1_COMPA_vect)
 {
+  ++interrupts_count;
+
   // Nothing to do if the adc hasn't finished.
   // In theory, the adc convertion should always be ready, except perhaps for
   // the first adc after the adc channel has been changed. Strictly speaking, the first
   // sample may not be entirely accurate then.
-  if (!analog_ready()) return;
+  if (bit_is_set(ADCSRA, ADSC)) return;
 
   if (ignore_count_) {
     --ignore_count_;
-    analog_trigger();
+    sbi(ADCSRA, ADSC);
     return;
   }
 
   // Get the sample.
-  uint8_t sample = analog_read();
+  uint8_t sample = ADCH;
 
   // Change the channel if need be, and then start the next adc convertion going.
   if (next_adc_pin != current_adc_pin) {
@@ -93,7 +102,7 @@ ISR(TIMER1_COMPA_vect)
     current_adc_pin = next_adc_pin;
   }
 
-  analog_trigger();
+  sbi(ADCSRA, ADSC);
 
   // Pass the sample on to the current adc task.
   if (current_adc_task) current_adc_task->service(sample);

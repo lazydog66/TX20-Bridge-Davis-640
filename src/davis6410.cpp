@@ -87,6 +87,7 @@ void davis6410::service()
     case davis6410state::sampling_speed: {
       // Check if the sample frame has finished.
       if (wind_speed_task_->finished()) {
+
         sample_pulse_count_ = wind_speed_task_->value();
         Serial.println("end speed sum " + String(wind_speed_task_->sum()));
 
