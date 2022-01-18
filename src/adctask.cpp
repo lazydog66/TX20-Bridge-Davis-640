@@ -68,6 +68,7 @@ ISR(TIMER1_COMPA_vect)
 
   if (ignore_count_) {
     --ignore_count_;
+    // Trigger the next sample.
     sbi(ADCSRA, ADSC);
     return;
   }
@@ -88,6 +89,7 @@ ISR(TIMER1_COMPA_vect)
     current_adc_pin = next_adc_pin;
   }
 
+  // Triggger the next sample.
   sbi(ADCSRA, ADSC);
 
   // Pass the sample on to the current adc task.
