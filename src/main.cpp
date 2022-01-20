@@ -14,7 +14,7 @@
 // If these are set, then the wind speed and direction an be tested by connecting the built in
 // led pin directly to A2, and a potentiometer can be attached to PD2. The output should then
 // display wind readings.
-constexpr bool k_debug_mode = true;
+constexpr bool k_debug_mode = false;
 constexpr uint8_t k_debug_wind_speed_mph = 10;
 constexpr uint8_t k_debug_pulse_width = 3;
 
@@ -108,7 +108,9 @@ void setup()
   Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
   Serial.println(F(""));
   Serial.println(String(F("speed sample T is ")) + String(k_wind_speed_sample_t) + F(" ms"));
-  Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce) + F(" ms"));
+  Serial.println(String(F("speed signal sample frequency ")) + String(k_adc_sample_rate) + F(" Hz")); 
+  Serial.println(String(F("pulse min width ")) + String(k_wind_pulse_width) + F(" samples")); 
+  Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce) + F(" samples"));
   Serial.println(F(""));
 
   // Creat the interface to the Davis 6410.
