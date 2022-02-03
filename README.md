@@ -27,12 +27,10 @@ V = P*T/2.25
 ```
 Here, T is the sample period and P is the number of pulses (wind cup revolutions) from the anemometer. If you take your sampling period to be 2.25 seconds, then the number of pulses equates nicely to the wind speed in miles per hour. Another advantage of using 2.25 seconds is that the pulse counter variable needs only to be an 8-bit value (I'm not going to worry about trying to measure a 255+ mph wind).
 
-To count the anemometer pulses, A2 is read at around 5KHz, and the signal is filtered to pass pulses that have a minimum width of about 1 ms. This is done in class *adcpulse*. Reading the wind vane is done in class *adctaskaverage*.
+To count the anemometer pulses, A2 is read at around 5KHz and the signal filtered. Classes *adcpulse* and *movingaverage* do the reading and filtering. The wind vane is read by class *adctaskaverage*.  The adc tasks are set up to read A0 or A2 in the background. The tasks run in the background using timer 1 interrupts.
 
-
-Reading A0 and A2 is handled in class adctask, and filtering and counting the pulses is done in adctaskaverage and adctaskpulse . The service routine simply increments a counter but also debounces the pulse. Looking on the internet I found that the debounce time for a reed switch is around 1 ms, but I went for a bit more anyway. I use an unsigned byte for the pulse counter which has the advantage of being atomic, thus interrupts do not need to be disabled and re-enabled when accessing the counter value from outside the interrupt service routine. The circuit for detecting the pulses is very simple. The output from pin 2 is attached to the
-
-The output of the wind vane potentiometer goes directly to pin A0, and is read using the analogue to digital converter in the Arduino. The value returned is mapped to 16 compass points.
+The class *pulsegenerator* was used to help with testing. It generates a pulse on a digital
+pin and can be used to emulate the speed signal coming from the davis 6410. 
 
 *davis6410* is implemented as a state machine driven by the method *service()*. After creating a *davis6410*. It should be called from within the main loop as quickly as possible. To initiate a new wind sample,call *start_sample()*. The service routine will then count pulses and when the sample period is over, the results are reported. Results are reported using a callback mechanism which is passed in when *start_sample* is called. Only one sample is taken at a time, so to keep sampling you need to call *start_sample()* repeatedly.
 
