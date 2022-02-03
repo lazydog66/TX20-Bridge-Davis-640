@@ -10,6 +10,9 @@ The connection to the TX20 uses 4 wires, Vcc, GND, Dtr, TXd, and these lines go 
 
 One note of caution, if you do build an emulator based on this project, please make sure that the voltage levels on the physical connections are correct. For my project, it was easy because I built all the hardware myself, including the wind station. I knew exactly what levels were being used. If you are using a commercial wind station then you will need to find this information out first before building a bridging box.
 
+## Code Branches
+There are two code branches in this repository, *master* and *speed-on-adc*. The first implements reading the wind speed signal from the Davis 6410 using a hardware falling edge interrupt on the Arduino. The other branch, *speed-on-adc*, reads the speed using the hardware adc. When I implemented the falling edge method, I found that, under certain circumstances, the signal coming from the Davis 6410 needed filtering. This can be done using a resistor and capacitor on the signal line feeding into the Arduino, but I found it more convenient to do the filtering in software. This was easily done by connecting the signal line to an adc channel. If you are looking at using a Davis 6410, then take a look at the branch which suits your needs. 
+
 ## The Code
 The code for the bridge comprises two main classes, *davis6410* and *tx20emulator*. The first handles reading the anemometer and wind vane on the Davis 6410. The other converts a wind speed and direction to a TX20 data frame. The *led* class is a simple way of blinking an LED to let me know that the bridge is working.
 
@@ -18,13 +21,16 @@ I used *PlatformIO* to develop the bridge software. I like it because it integra
 The important classes are, *davis6410* and *tx20emulator*. The first is responsible for reading the Davis 6410 and reporting the wind speed and direction. If you're reading this and only interested in the  Davis 6410 part of the project, then this class can be lifted and used in your project. Class *tx20emulator* contains the code that allows an Arduino Pro Mini to emulate a TX20.
 
 ### class davis6410
-The Davis 6410 is hooked up to the Arduino using pin 2 for the anemometer, and A0 for the wind vane. Each revolution of the wind cups engages the reed switch in the anemometer causing a pulse. The spec for the 6410 gives a simple formula for calculating the wind speed in miles per hour from the number of pulses and a given period of time. The formula is,
+The Davis 6410 is hooked up to the Arduino using A2 for the anemometer, and A0 for the wind vane. Each revolution of the wind cups engages the reed switch in the anemometer causing a pulse. The spec for the 6410 gives a simple formula for calculating the wind speed in miles per hour from the number of pulses and a given period of time. The formula is,
 ```
 V = P*T/2.25
 ```
 Here, T is the sample period and P is the number of pulses (wind cup revolutions) from the anemometer. If you take your sampling period to be 2.25 seconds, then the number of pulses equates nicely to the wind speed in miles per hour. Another advantage of using 2.25 seconds is that the pulse counter variable needs only to be an 8-bit value (I'm not going to worry about trying to measure a 255+ mph wind).
 
-To count the anemometer pulses, pin 2 is set to cause an interrupt on the falling edge of the pulse. The service routine simply increments a counter but also debounces the pulse. Looking on the internet I found that the debounce time for a reed switch is around 1 ms, but I went for a bit more anyway. I use an unsigned byte for the pulse counter which has the advantage of being atomic, thus interrupts do not need to be disabled and re-enabled when accessing the counter value from outside the interrupt service routine. The circuit for detecting the pulses is very simple. The output from pin 2 is attached to the
+To count the anemometer pulses, A2 is read at around 5KHz, and the signal is filtered to pass pulses that have a minimum width of about 1 ms. This is done in class *adcpulse*. Reading the wind vane is done in class *adctaskaverage*.
+
+
+Reading A0 and A2 is handled in class adctask, and filtering and counting the pulses is done in adctaskaverage and adctaskpulse . The service routine simply increments a counter but also debounces the pulse. Looking on the internet I found that the debounce time for a reed switch is around 1 ms, but I went for a bit more anyway. I use an unsigned byte for the pulse counter which has the advantage of being atomic, thus interrupts do not need to be disabled and re-enabled when accessing the counter value from outside the interrupt service routine. The circuit for detecting the pulses is very simple. The output from pin 2 is attached to the
 
 The output of the wind vane potentiometer goes directly to pin A0, and is read using the analogue to digital converter in the Arduino. The value returned is mapped to 16 compass points.
 
