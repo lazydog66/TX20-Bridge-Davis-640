@@ -47,7 +47,7 @@ class adctask
   uint32_t sample_rate() const { return k_adc_sample_rate; }
 
   // Start this task
-  virtual void start() = 0;
+  virtual bool start() = 0;
 
   // Stop this task.
   virtual void stop() = 0;
