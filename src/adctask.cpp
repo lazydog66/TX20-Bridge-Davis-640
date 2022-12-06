@@ -2,7 +2,6 @@
 #include <Arduino.h>
 
 #include "adctask.h"
-#include "filter.h"
 
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
