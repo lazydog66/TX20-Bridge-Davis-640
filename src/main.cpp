@@ -1,5 +1,6 @@
 
 #include <Arduino.h>
+#include <avr/wdt.h>
 
 #include "davis6410.h"
 #include "tx20emulator.h"
@@ -105,11 +106,11 @@ void setup()
   delay(500);
 
   Serial.println(F(""));
-  Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.1"));
+  Serial.println(F("Davis 6410 ==> TX20 Bridge v1.0.2"));
   Serial.println(F(""));
   Serial.println(String(F("speed sample T is ")) + String(k_wind_speed_sample_t) + F(" ms"));
-  Serial.println(String(F("speed signal sample frequency ")) + String(k_adc_sample_rate) + F(" Hz")); 
-  Serial.println(String(F("pulse min width ")) + String(k_wind_pulse_width) + F(" samples")); 
+  Serial.println(String(F("speed signal sample frequency ")) + String(k_adc_sample_rate) + F(" Hz"));
+  Serial.println(String(F("pulse min width ")) + String(k_wind_pulse_width) + F(" samples"));
   Serial.println(String(F("debounce set to ")) + String(k_wind_pulse_debounce) + F(" samples"));
   Serial.println(F(""));
 
@@ -129,6 +130,8 @@ void setup()
     pinMode(PD2, OUTPUT);
     digitalWrite(PD2, HIGH);
   }
+
+  wdt_enable(WDTO_4S);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -146,4 +149,6 @@ void loop()
   // In debug mode, oulses are output on the built in led pin.
   // The pin can be attached directly to the signal input adc pin to emulate the Davis 6410.
   if (k_debug_mode) pulse_generator.service();
+
+  wdt_reset();
 }
