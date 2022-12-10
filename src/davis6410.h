@@ -24,7 +24,7 @@ constexpr unsigned long k_wind_speed_sample_t = 2250;
 
 // This is the minimum width, in samples, of a pulse on the wind speed sensor line.
 // It's worked out as the number of samples in 3 ms.
-constexpr uint8_t k_wind_pulse_width = 2.5 * k_adc_sample_rate / 1000;
+constexpr uint8_t k_wind_pulse_width = 2.0 * k_adc_sample_rate / 1000;
 
 // Debounce period for the wind speed pulses, in number of samples.
 // Information on the web suggests that the debounce period for a reed switch

@@ -4,7 +4,8 @@
 
 
 // Change this to the clock frequency of the Arduino;
-constexpr uint32_t k_arduino_frequency = 16000000;
+//constexpr uint32_t k_arduino_frequency = 16000000;
+constexpr uint32_t k_arduino_frequency = 8000000;
 
 // This is the frequency that timer 1 is set to run at.
 constexpr uint32_t k_timer_1_frequency = 5000;
@@ -47,7 +48,7 @@ class adctask
   uint32_t sample_rate() const { return k_adc_sample_rate; }
 
   // Start this task
-  virtual bool start() = 0;
+  virtual void start() = 0;
 
   // Stop this task.
   virtual void stop() = 0;

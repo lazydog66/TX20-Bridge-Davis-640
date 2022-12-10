@@ -17,14 +17,14 @@
 // display wind readings.
 constexpr bool k_debug_mode = false;
 constexpr uint8_t k_debug_wind_speed_mph = 10;
-constexpr uint8_t k_debug_pulse_width = 3;
+constexpr uint8_t k_debug_pulse_width = 2;
 
 // The pin the front panel led is attached to.
 // The led is flashed to show when a wind sample has been taken.
 constexpr int k_front_panel_ped_pin = 9;
 
 // The front panel led is flashed for this number of milliseconds when a sample has been taken.
-constexpr uint16_t k_led_sample_flash_ms = 333;
+constexpr uint16_t k_led_sample_flash_ms = 20;
 
 // The wind sensor pin for the Davis 6410 has to be one of the adc channel
 constexpr int k_wind_sensor_pin_adc = 2;
